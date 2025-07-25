@@ -1,2 +1,4 @@
 /data.json
 /编译.bat
+build/
+.idea/
