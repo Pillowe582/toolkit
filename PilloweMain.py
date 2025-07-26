@@ -6,37 +6,50 @@ import sys
 import psutil as psutil
 import pyperclip
 import qasync as qasync
+import winshell
+from win32com.client import Dispatch
 from PyQt5 import uic  # 导入uic模块
 from PyQt5.QtCore import QFileInfo, QUrl, QCoreApplication, Qt
 from PyQt5.QtGui import QIcon, QDesktopServices
 from PyQt5.QtWidgets import QMainWindow, QListWidgetItem, QFileDialog, QApplication, QMessageBox, QFileIconProvider, \
-    QDialog, QSystemTrayIcon, QAction, QMenu
-
-if os.path.exists('data.json'):
-    exist = True
-else:
-    exist = False
-    temp = {"0": ["新增项", "https://vdse.bdstatic.com//192d9a98d782d9c74c96f09db9378d93.mp4", "C:/"]}
-    with open("data.json", 'w', encoding="utf-8") as f:
-        json.dump(temp, f, ensure_ascii=False, indent=4)
-
-with open("data.json", "r", encoding="utf-8") as f:
-    data = json.load(f)
+    QDialog, QSystemTrayIcon, QAction, QMenu, QDialogButtonBox
 
 QCoreApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
-print("data.json exists: ", exist)
 data_list = {}
 
+ver = "1.5.0"
 
-def check_is_solo() -> bool:
+
+def check_is_solo():
     pid = []
     for proc in psutil.process_iter():
         if proc.name() == "PilloweMain.exe":
             pid.append(proc.pid)
-    print(pid)
-    if pid is None or len(pid) <= 1:
+    print("existing PID: ", pid)
+    global self_path
+    if len(pid) == 1:
+        self_pid = psutil.Process(pid[0])
+        self_path = os.path.dirname(self_pid.exe())
+        print('Selfpath: ', self_path)
+        return True
+    elif len(pid) == 0:
+        msg = QMessageBox()
+        msg.setWindowIcon(QIcon("assets/MainIcon.ico"))
+        msg.setIcon(QMessageBox.Warning)
+        msg.setWindowTitle("似乎在编辑器中运行？")
+        msg.setText("建议先打开一个已经编译好的exe，否则可能出现特性")
+        msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Close)
+        msg.exec_()
+        self_path = "C:"
         return True
     else:
+        msg = QMessageBox()
+        msg.setWindowIcon(QIcon("assets/MainIcon.ico"))
+        msg.setIcon(QMessageBox.Warning)
+        msg.setWindowTitle("程序重复运行！")
+        msg.setText("一山不容二虎，请尝试清理后台或重新启动")
+        msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Close)
+        msg.exec_()
         return False
 
 
@@ -49,7 +62,6 @@ def get_icon(file_path):
 def save():
     with open('data.json', 'w') as file:
         json.dump(data, file, indent=4)
-    print("data saved")
 
 
 class Changelog(QDialog):
@@ -60,7 +72,96 @@ class Changelog(QDialog):
         self.setWindowIcon(QIcon("assets/MainIcon.ico"))
 
 
+class Settings(QDialog):
+    def __init__(self):
+        super().__init__()
+        uic.loadUi("assets/settings.ui", self)
+        self.resize(1080, 720)
+        self.setWindowIcon(QIcon("assets/MainIcon.ico"))
+        self.autostart_enabled = self.check_autostart()
+        self.autostart.setChecked(self.autostart_enabled)
+        self.dialogbtn.clicked.connect(self.refresh_settings)
+
+    def refresh_settings(self, button):
+        if self.dialogbtn.standardButton(button) == QDialogButtonBox.Apply:
+            autostart = self.autostart.isChecked()
+            self.toggle_autostart(autostart)
+
+    @staticmethod
+    def add_to_startup():
+        print("Adding to autostart...")
+        try:
+            startup_folder = winshell.startup()
+            print(f"Startup Folder: {startup_folder}")
+            shortcut_path = os.path.join(startup_folder, "PilloweMain.lnk")
+            shell = Dispatch('WScript.Shell')
+            shortcut = shell.CreateShortCut(shortcut_path)
+            shortcut.TargetPath = f"{self_path}\PilloweMain.exe"
+            shortcut.WorkingDirectory = self_path
+            shortcut.Description = "Pillowe's Toolkit"
+            shortcut.save()
+            print("开机自启动设置成功")
+            return True
+        except Exception as e:
+            print(f"操作失败: {e}")
+            return False
+
+    @staticmethod
+    def remove_from_startup():
+        try:
+            startup_folder = winshell.startup()
+            # lnk_path=
+            os.remove(startup_folder + '\PilloweMain.lnk')
+            print("移除开机自启项成功")
+        except Exception as e:
+            print(f"移除开机自启项失败：{e}")
+
+    @staticmethod
+    def check_autostart():
+        """检查是否已设置开机自启动"""
+        print("Autostart Checking...")
+        print(sys.platform)
+        if sys.platform == 'win32':
+            startup_folder = winshell.startup()
+            link_path = startup_folder + '\PilloweMain.lnk'
+            if os.path.isfile(link_path):
+                shell = Dispatch('WScript.Shell')
+                link = shell.CreateShortCut(link_path)
+                print(f"Is Autostarting, link file: {link_path}")
+                if not link.TargetPath == self_path + "\PilloweMain.exe":
+                    print("Not current path, reset.")
+                    Settings.add_to_startup()
+                return True
+            else:
+                print("Not autostarting")
+                return False
+
+    def toggle_autostart(self, enable: bool):
+        """切换开机自启动状态"""
+        if enable:
+            self.add_to_startup()
+        else:
+            self.remove_from_startup()
+
+    def closeEvent(self, event):
+        window.settings = None
+        super(Settings, self).closeEvent(event)
+
+
 def empty_json():
+    if os.path.exists('data.json'):
+        exist = True
+    else:
+        exist = False
+        temp = {
+            "0": ["新增项", "https://vdse.bdstatic.com//192d9a98d782d9c74c96f09db9378d93.mp4", "assets/MainIcon.ico"]}
+        with open("data.json", 'w', encoding="utf-8") as f:
+            json.dump(temp, f, ensure_ascii=False, indent=4)
+
+    print("data.json exists: ", exist)
+    with open("data.json", "r", encoding="utf-8") as f:
+        global data
+        data = json.load(f)
     if not exist:
         msg = QMessageBox()
         msg.setWindowIcon(QIcon("assets/MainIcon.ico"))
@@ -79,6 +180,8 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        empty_json()
+        modify_json_key('data.json')
         self.noticed = False
         self.tray_icon = None
         uic.loadUi("assets/toolkit.ui", self)
@@ -94,10 +197,12 @@ class MainWindow(QMainWindow):
         self.pastebtn.clicked.connect(self.paste_site)
         self.ngguu.triggered.connect(surprise)
         self.changelog.triggered.connect(self.changelog_on)
+        self.settings.triggered.connect(self.settings_on)
+        self.exit.triggered.connect(self.quit)
         self.executebtn.clicked.connect(self.execute)
         self.changelog = None
+        self.settings = None
         self.tray_setup()
-        empty_json()
         for i in data:
             self.load_new()
             self.applist.setCurrentRow(int(i))
@@ -116,10 +221,17 @@ class MainWindow(QMainWindow):
         cheat_action.triggered.connect(surprise)
         tray_action = QAction("最小化", self)
         tray_action.triggered.connect(self.hide_to_tray)
+        settings_action = QAction("设置...", self)
+        settings_action.triggered.connect(self.settings_on)
+        changelog_action = QAction("更新日志...", self)
+        changelog_action.triggered.connect(self.changelog_on)
         tray_menu.addAction(restore_action)
         tray_menu.addAction(tray_action)
-        tray_menu.addAction(cheat_action)
         tray_menu.addSeparator()
+        tray_menu.addAction(settings_action)
+        tray_menu.addAction(changelog_action)
+        tray_menu.addSeparator()
+        tray_menu.addAction(cheat_action)
         tray_menu.addAction(quit_action)
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.activated.connect(self.on_tray_icon_activated)
@@ -135,6 +247,7 @@ class MainWindow(QMainWindow):
     def restore_window(self):
         self.activateWindow()  # 激活窗口
         self.show()  # 从托盘恢复窗口
+        self.tray_icon.setVisible(False)
         self.setWindowState(Qt.WindowNoState)
 
     def closeEvent(self, event):
@@ -167,13 +280,26 @@ class MainWindow(QMainWindow):
 
     def changelog_on(self):
         if not self.changelog:
+            print("Opening Changelog")
             self.changelog = Changelog()
+            self.changelog.setWindowModality(Qt.ApplicationModal)
+        self.restore_window()
         self.changelog.show()
+
+    def settings_on(self):
+        print(self.settings)
+        if not self.settings:
+            print("Opening Settings")
+            self.settings = Settings()
+            self.settings.setWindowModality(Qt.ApplicationModal)
+        self.restore_window()
+        self.settings.show()
 
     def append_new(self):
         item = QListWidgetItem(QIcon("assets/MainIcon.ico"), "新增项")
         self.applist.addItem(item)
-        data[str(len(data))] = ["新增项", "https://vdse.bdstatic.com//192d9a98d782d9c74c96f09db9378d93.mp4", "C:/"]
+        data[str(len(data))] = ["新增项", "https://vdse.bdstatic.com//192d9a98d782d9c74c96f09db9378d93.mp4",
+                                "assets/MainIcon.ico"]
         save()
 
     def paste_site(self):
@@ -194,7 +320,7 @@ class MainWindow(QMainWindow):
         msg = QMessageBox()
         msg.setWindowIcon(QIcon("assets/MainIcon.ico"))
         msg.setIcon(QMessageBox.Warning)
-        msg.setWindowTitle("？？？")
+        msg.setWindowTitle("？？！")
         msg.setText("这样将会永久失去这一项！（真的很久！）")
         msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         response = msg.exec_()
@@ -262,23 +388,36 @@ def modify_json_key(file_path):
         json.dump(data, file, ensure_ascii=False, indent=4)
 
 
+def check_platform():
+    if sys.platform == 'win32':
+        return True
+    else:
+        print("Not Windows")
+        msg0 = QMessageBox()
+        msg0.setWindowIcon(QIcon("assets/MainIcon.ico"))
+        msg0.setIcon(QMessageBox.Critical)
+        msg0.setWindowTitle("水土不服！")
+        msg0.setText("此程序目前仅支持Windows系统，淮南为橘淮北为枳")
+        msg0.setStandardButtons(QMessageBox.Ignore | QMessageBox.Close)
+        response = msg0.exec_()
+        if response == QMessageBox.Ignore:
+            print("Ignore!")
+            return True
+        else:
+            print("Exit")
+            return False
+
+
 async def async_main():
-    modify_json_key('data.json')
-    if check_is_solo():
-        app = QApplication(sys.argv)
+    if check_platform() and check_is_solo():
+        global window
         window = MainWindow()
         window.show()
-        fut = asyncio.get_event_loop().create_future()
-        await fut
-        sys.exit(app.exec_())
-    else:
-        msg = QMessageBox()
-        msg.setWindowIcon(QIcon("assets/MainIcon.ico"))
-        msg.setIcon(QMessageBox.Warning)
-        msg.setWindowTitle("程序重复运行！")
-        msg.setText("一山不容二虎")
-        msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Close)
-        msg.exec_()
+        try:
+            while True:
+                await asyncio.sleep(1)
+        except:
+            print(f"Seems closed")
 
 
 if __name__ == "__main__":

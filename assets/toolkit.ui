@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>1008</width>
-    <height>689</height>
+    <height>740</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -286,8 +286,8 @@
          <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Eras Demi ITC'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:13pt;&quot;&gt;D:/qewriquweriqwer&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Eras Demi ITC','宋体'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'Eras Demi ITC'; font-size:13pt;&quot;&gt;D:/qewriquweriqwer&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="overwriteMode">
          <bool>false</bool>
@@ -710,6 +710,7 @@ p, li { white-space: pre-wrap; }
         <property name="font">
          <font>
           <family>宋体</family>
+          <pointsize>9</pointsize>
           <weight>75</weight>
           <bold>true</bold>
           <stylestrategy>PreferAntialias</stylestrategy>
@@ -769,8 +770,8 @@ p, li { white-space: pre-wrap; }
          <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Eras Demi ITC'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a href=&quot;www.baidu.com&quot;&gt;&lt;span style=&quot; font-size:13pt; text-decoration: underline; color:#0000ff;&quot;&gt;aaa&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Eras Demi ITC','宋体'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;a href=&quot;www.baidu.com&quot;&gt;&lt;span style=&quot; font-family:'Eras Demi ITC'; font-size:13pt; text-decoration: underline; color:#0000ff;&quot;&gt;aaa&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
         <property name="overwriteMode">
          <bool>false</bool>
@@ -866,12 +867,12 @@ spacing: 100px;</string>
      <x>0</x>
      <y>0</y>
      <width>1008</width>
-     <height>22</height>
+     <height>30</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
     <property name="title">
-     <string>关于</string>
+     <string>操作</string>
     </property>
     <widget class="QMenu" name="menu_2">
      <property name="title">
@@ -911,6 +912,9 @@ spacing: 100px;</string>
     </widget>
     <addaction name="menu_2"/>
     <addaction name="changelog"/>
+    <addaction name="settings"/>
+    <addaction name="separator"/>
+    <addaction name="exit"/>
    </widget>
    <addaction name="menu"/>
   </widget>
@@ -923,6 +927,16 @@ spacing: 100px;</string>
   <action name="changelog">
    <property name="text">
     <string>更新日志</string>
+   </property>
+  </action>
+  <action name="settings">
+   <property name="text">
+    <string>设置</string>
+   </property>
+  </action>
+  <action name="exit">
+   <property name="text">
+    <string>退出</string>
    </property>
   </action>
  </widget>
