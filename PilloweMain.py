@@ -3,21 +3,26 @@ import json
 import os
 import sys
 
+import patoolib
 import psutil as psutil
 import pyperclip
 import qasync as qasync
+import requests
 import winshell
-from win32com.client import Dispatch
 from PyQt5 import uic  # 导入uic模块
-from PyQt5.QtCore import QFileInfo, QUrl, QCoreApplication, Qt
+from PyQt5.QtCore import QFileInfo, QUrl, QCoreApplication, Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QDesktopServices
 from PyQt5.QtWidgets import QMainWindow, QListWidgetItem, QFileDialog, QApplication, QMessageBox, QFileIconProvider, \
     QDialog, QSystemTrayIcon, QAction, QMenu, QDialogButtonBox
+from patoolib.util import PatoolError
+from win32com.client import Dispatch
 
 QCoreApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
 data_list = {}
 
-ver = "1.5.0"
+ver = "v1.6.0"
+owner = 'pillowe'
+repo = 'toolkit'
 
 
 def check_is_solo():
@@ -70,6 +75,125 @@ class Changelog(QDialog):
         uic.loadUi("assets/changelog.ui", self)
         self.resize(1080, 720)
         self.setWindowIcon(QIcon("assets/MainIcon.ico"))
+        self.chkupdatebtn.clicked.connect(window.updater_on)
+
+
+class Updater(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.download_thread = None
+        uic.loadUi("assets/updater.ui", self)
+        self.resize(1080, 720)
+        self.setWindowIcon(QIcon("assets/MainIcon.ico"))
+        self.release_info = self.get_latest_release_info(owner, repo)
+        self.updatelbl.append(f"当前发行版为：{ver}")
+        self.updatelbl.append(f"目前最新发行版为：{self.release_info['tag_name']}")
+        self.updatelbl.append(f"\n{self.release_info['body']}")
+        if ver == self.release_info['tag_name']:
+            self.updatebtn.setText("已是最新")
+            self.updatebtn.setEnabled(False)
+        self.updatebtn.clicked.connect(self.start_download)
+
+    @staticmethod
+    def get_latest_release_info(owner, repo):
+        url = f"https://gitee.com/api/v5/repos/{owner}/{repo}/releases/latest"
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+            release_info = response.json()
+            # release_info['tag_name']为发行版的tag
+            # release_info['body']为发行版描述
+            print('成功获取最新发布版信息')
+            return release_info
+        except Exception as e:
+            print(f"获取最新发行版失败: {e}")
+            return None
+
+    def start_download(self):
+        try:
+            if self.release_info['assets']:
+                self.download_thread = DownloadThread(self.release_info, '.')
+                self.download_thread.completion_size.connect(self.bar.setRange)
+                self.download_thread.progress_updated.connect(self.bar.setValue)  # 更新进度条
+                self.download_thread.download_finished.connect(self.on_download_finished)
+                self.download_thread.error_occurred.connect(self.show_error)
+                self.download_thread.start()
+        except Exception as e:
+            print(e)
+
+    def on_download_finished(self, archive_path, extract_path, delete=False):
+        msg = QMessageBox()
+        msg.setWindowIcon(QIcon("assets/MainIcon.ico"))
+        msg.setIcon(QMessageBox.Critical)
+        msg.setWindowTitle("下载更新成功！")
+        msg.setText("程序将重启以安装更新")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.exec_()
+        try:
+            # 解压文件
+            patoolib.extract_archive(archive_path, outdir=extract_path)
+            print(f"文件 {archive_path} 已成功解压")
+            if delete:
+                asyncio.create_task(self.break_update())
+        except PatoolError as e:
+            print(f"解压失败: {e}")
+        except Exception as e:
+            print(f"操作失败: {e}")
+
+    def show_error(self, error):
+        msg = QMessageBox()
+        msg.setWindowIcon(QIcon("assets/MainIcon.ico"))
+        msg.setIcon(QMessageBox.Critical)
+        msg.setWindowTitle("下载更新失败！")
+        msg.setText(f"再次尝试？\nError: {error}")
+        msg.setStandardButtons(QMessageBox.Close | QMessageBox.Yes)
+        response = msg.exec_()
+        if response == QMessageBox.Yes:
+            self.start_download()
+
+    async def break_update(self):
+        cmd = "start /B update.bat"
+        await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+        for task in asyncio.all_tasks():
+            if task is not asyncio.current_task():  # 排除自身
+                task.cancel()
+        QApplication.quit()
+
+
+class DownloadThread(QThread):
+    completion_size = pyqtSignal(int, int)  # 总大小信号
+    progress_updated = pyqtSignal(int)  # 进度更新信号
+    download_finished = pyqtSignal(str, str, bool)  # 下载完成信号
+    error_occurred = pyqtSignal(str)  # 错误信号
+
+    def __init__(self, release_info, save_path, parent=None):
+        super().__init__(parent)
+        self.download_url = release_info['assets'][0]['browser_download_url']
+        self.save_path = save_path
+
+    def run(self):
+        try:
+            file_response = requests.get(self.download_url, stream=True)
+            total_size = int(file_response.headers.get('content-length', 0))
+            print("总大小： ", total_size)
+            downloaded_size = 0
+            precentage = 0
+            file_name = os.path.basename(self.download_url)
+            save_file = os.path.join(self.save_path, file_name)
+            self.completion_size.emit(0, total_size)
+            with open(save_file, 'wb') as f:
+                for chunk in file_response.iter_content(chunk_size=1024):
+                    if chunk:
+                        downloaded_size += len(chunk)
+                        if not precentage == int(downloaded_size * 100 / total_size):
+                            print(precentage + 1, "%")
+                            self.progress_updated.emit(downloaded_size)
+                        precentage = int(downloaded_size * 100 / total_size)
+                        f.write(chunk)
+            self.progress_updated.emit(total_size)
+            self.download_finished.emit(save_file, self.save_path, True)
+        except Exception as e:
+            self.error_occurred.emit(str(e))
 
 
 class Settings(QDialog):
@@ -180,6 +304,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.updater = None
         empty_json()
         modify_json_key('data.json')
         self.noticed = False
@@ -295,6 +420,14 @@ class MainWindow(QMainWindow):
         self.restore_window()
         self.settings.show()
 
+    def updater_on(self):
+        if not self.updater:
+            print("Opening Updater")
+            self.updater = Updater()
+            self.updater.setWindowModality(Qt.ApplicationModal)
+        self.restore_window()
+        self.updater.show()
+
     def append_new(self):
         item = QListWidgetItem(QIcon("assets/MainIcon.ico"), "新增项")
         self.applist.addItem(item)
@@ -306,7 +439,7 @@ class MainWindow(QMainWindow):
         msg = QMessageBox()
         msg.setWindowIcon(QIcon("assets/MainIcon.ico"))
         msg.setIcon(QMessageBox.Question)
-        msg.setWindowTitle("？？？")
+        msg.setWindowTitle("？？！")
         msg.setText("要粘贴并覆盖吗")
         msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
         response = msg.exec_()

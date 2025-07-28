@@ -14,17 +14,26 @@
    <string>更新日志</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="1" column="0">
-    <widget class="QDialogButtonBox" name="buttonBox">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
+   <item row="3" column="2">
+    <widget class="QPushButton" name="pushButton">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
      </property>
-     <property name="standardButtons">
-      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Close|QDialogButtonBox::Discard|QDialogButtonBox::Ignore|QDialogButtonBox::No|QDialogButtonBox::Ok|QDialogButtonBox::Save|QDialogButtonBox::Yes</set>
+     <property name="text">
+      <string>退出</string>
+     </property>
+     <property name="autoDefault">
+      <bool>false</bool>
+     </property>
+     <property name="flat">
+      <bool>false</bool>
      </property>
     </widget>
    </item>
-   <item row="0" column="0">
+   <item row="1" column="0" colspan="3">
     <widget class="QTextBrowser" name="textBrowser">
      <property name="font">
       <font>
@@ -43,6 +52,9 @@
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'宋体','宋体'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:16pt; font-weight:600;&quot;&gt;1.6.0&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;·增加了检查更新与自动下载安装更新功能&lt;/span&gt;&lt;/p&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:12pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:16pt; font-weight:600;&quot;&gt;1.5.0&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-size:12pt;&quot;&gt;·删除了由&lt;/span&gt;&lt;span style=&quot; font-family:'SimSun'; font-size:12pt;&quot;&gt;asyncio.get_event_loop().create_future()创建的永远不会完成的Future&lt;/span&gt;&lt;/p&gt;
 &lt;p style=&quot; margin-top:12px; margin-bottom:12px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;span style=&quot; font-family:'SimSun'; font-size:12pt;&quot;&gt;·由于程序在非windows系统运行不正常，添加了非win32环境下运行时的劝退警告（可以Ignore anyway）&lt;/span&gt;&lt;/p&gt;
@@ -86,39 +98,39 @@ p, li { white-space: pre-wrap; }
      </property>
     </widget>
    </item>
+   <item row="3" column="1">
+    <widget class="QPushButton" name="chkupdatebtn">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Maximum" vsizetype="Fixed">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string>检查更新...</string>
+     </property>
+     <property name="autoDefault">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/>
  <connections>
   <connection>
-   <sender>buttonBox</sender>
-   <signal>accepted()</signal>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
    <receiver>changelog</receiver>
-   <slot>accept()</slot>
+   <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>248</x>
-     <y>254</y>
+     <x>1175</x>
+     <y>585</y>
     </hint>
     <hint type="destinationlabel">
-     <x>157</x>
-     <y>274</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>buttonBox</sender>
-   <signal>rejected()</signal>
-   <receiver>changelog</receiver>
-   <slot>reject()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>316</x>
-     <y>260</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>286</x>
-     <y>274</y>
+     <x>629</x>
+     <y>308</y>
     </hint>
    </hints>
   </connection>

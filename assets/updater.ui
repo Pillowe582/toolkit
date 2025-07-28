@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Updater</class>
+ <widget class="QDialog" name="Updater">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>626</width>
+    <height>403</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>检查更新</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="2" column="6" alignment="Qt::AlignRight">
+    <widget class="QPushButton" name="pushButton">
+     <property name="text">
+      <string>关闭</string>
+     </property>
+     <property name="autoDefault">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="0" colspan="7">
+    <widget class="QProgressBar" name="bar">
+     <property name="value">
+      <number>0</number>
+     </property>
+     <property name="textVisible">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="5" alignment="Qt::AlignRight">
+    <widget class="QPushButton" name="updatebtn">
+     <property name="text">
+      <string>更新</string>
+     </property>
+     <property name="autoDefault">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="7">
+    <widget class="QTextBrowser" name="updatelbl">
+     <property name="font">
+      <font>
+       <family>宋体</family>
+       <pointsize>12</pointsize>
+       <weight>75</weight>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="frameShape">
+      <enum>QFrame::Box</enum>
+     </property>
+     <property name="frameShadow">
+      <enum>QFrame::Plain</enum>
+     </property>
+     <property name="overwriteMode">
+      <bool>true</bool>
+     </property>
+     <property name="openLinks">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>pushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>Updater</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>541</x>
+     <y>370</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>312</x>
+     <y>201</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>
