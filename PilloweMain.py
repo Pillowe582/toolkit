@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import sys
+import zipfile
 
 import patoolib
 import psutil as psutil
@@ -118,10 +119,12 @@ class Updater(QDialog):
                 self.download_thread.download_finished.connect(self.on_download_finished)
                 self.download_thread.error_occurred.connect(self.show_error)
                 self.download_thread.start()
+                self.updatebtn.setText("下载中...")
+                self.updatebtn.setEnabled(False)
         except Exception as e:
             print(e)
 
-    def on_download_finished(self, archive_path, extract_path, delete=False):
+    def on_download_finished(self, archive_path, extract_path, delete=True):
         msg = QMessageBox()
         msg.setWindowIcon(QIcon("assets/MainIcon.ico"))
         msg.setIcon(QMessageBox.Critical)
@@ -131,14 +134,18 @@ class Updater(QDialog):
         msg.exec_()
         try:
             # 解压文件
-            patoolib.extract_archive(archive_path, outdir=extract_path)
-            print(f"文件 {archive_path} 已成功解压")
+            os.makedirs(extract_path, exist_ok=True)
+            with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+                zip_ref.extractall(extract_path)
+                print(f"ZIP文件已解压到: {extract_path}")
+            os.remove(archive_path)
+            print("解压过的zip已删除")
             if delete:
                 asyncio.create_task(self.break_update())
-        except PatoolError as e:
-            print(f"解压失败: {e}")
         except Exception as e:
-            print(f"操作失败: {e}")
+            print(f"解压操作失败: {e}")
+            self.updatebtn.setText("更新")
+            self.updatebtn.setEnabled(True)
 
     def show_error(self, error):
         msg = QMessageBox()
@@ -150,6 +157,9 @@ class Updater(QDialog):
         response = msg.exec_()
         if response == QMessageBox.Yes:
             self.start_download()
+        else:
+            self.updatebtn.setText("更新")
+            self.updatebtn.setEnabled(True)
 
     async def break_update(self):
         cmd = "start /B update.bat"
@@ -158,6 +168,7 @@ class Updater(QDialog):
             if task is not asyncio.current_task():  # 排除自身
                 task.cancel()
         QApplication.quit()
+        sys.exit()
 
 
 class DownloadThread(QThread):
@@ -187,7 +198,7 @@ class DownloadThread(QThread):
                         downloaded_size += len(chunk)
                         if not precentage == int(downloaded_size * 100 / total_size):
                             print(precentage + 1, "%")
-                            self.progress_updated.emit(downloaded_size)
+                        self.progress_updated.emit(downloaded_size)
                         precentage = int(downloaded_size * 100 / total_size)
                         f.write(chunk)
             self.progress_updated.emit(total_size)
@@ -332,6 +343,8 @@ class MainWindow(QMainWindow):
             self.load_new()
             self.applist.setCurrentRow(int(i))
             self.applist.currentItem().setIcon(get_icon(data[str(self.applist.row(self.applist.currentItem()))][2]))
+        if Updater.get_latest_release_info(owner,repo):
+            self.updater_on()
 
     def tray_setup(self):
         self.tray_icon = QSystemTrayIcon(self)

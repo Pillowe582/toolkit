@@ -1,6 +1,6 @@
 @echo off
-timeout 1
-copy "./Pillowe's Toolkit" "."
+timeout 3
+xcopy "./Pillowe's Toolkit" "." /s /e /y
 rd /s /q "./Pillowe's Toolkit"
-start "PilloweMain.exe"
+start "" "PilloweMain.exe"
 
