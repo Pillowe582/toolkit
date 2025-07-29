@@ -4,7 +4,6 @@ import os
 import sys
 import zipfile
 
-import patoolib
 import psutil as psutil
 import pyperclip
 import qasync as qasync
@@ -15,13 +14,12 @@ from PyQt5.QtCore import QFileInfo, QUrl, QCoreApplication, Qt, QThread, pyqtSig
 from PyQt5.QtGui import QIcon, QDesktopServices
 from PyQt5.QtWidgets import QMainWindow, QListWidgetItem, QFileDialog, QApplication, QMessageBox, QFileIconProvider, \
     QDialog, QSystemTrayIcon, QAction, QMenu, QDialogButtonBox
-from patoolib.util import PatoolError
 from win32com.client import Dispatch
 
 QCoreApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
 data_list = {}
 
-ver = "v1.6.1"
+ver = "v1.6.2"
 owner = 'pillowe'
 repo = 'toolkit'
 
@@ -87,7 +85,6 @@ class Updater(QDialog):
         self.resize(1080, 720)
         self.setWindowIcon(QIcon("assets/MainIcon.ico"))
         self.updatebtn.clicked.connect(self.start_download)
-        self.retext()
 
     @staticmethod
     def get_latest_release_info(owner, repo):
@@ -121,7 +118,7 @@ class Updater(QDialog):
     def on_download_finished(self, archive_path, extract_path, delete=True):
         msg = QMessageBox()
         msg.setWindowIcon(QIcon("assets/MainIcon.ico"))
-        msg.setIcon(QMessageBox.Critical)
+        msg.setIcon(QMessageBox.Information)
         msg.setWindowTitle("下载更新成功！")
         msg.setText("程序将重启以安装更新")
         msg.setStandardButtons(QMessageBox.Ok)
@@ -140,15 +137,21 @@ class Updater(QDialog):
             print(f"解压操作失败: {e}")
             self.updatebtn.setText("更新")
             self.updatebtn.setEnabled(True)
+
     def retext(self):
         self.updatelbl.setText("")
         self.release_info = self.get_latest_release_info(owner, repo)
-        self.updatelbl.append(f"当前发行版为：{ver}")
-        self.updatelbl.append(f"目前最新发行版为：{self.release_info['tag_name']}")
-        self.updatelbl.append(f"\n{self.release_info['body']}")
-        if ver == self.release_info['tag_name']:
-            self.updatebtn.setText("已是最新")
+        if self.release_info:
+            self.updatelbl.append(f"当前发行版为：{ver}")
+            self.updatelbl.append(f"目前最新发行版为：{self.release_info['tag_name']}")
+            self.updatelbl.append(f"\n{self.release_info['body']}")
+            if ver == self.release_info['tag_name']:
+                self.updatebtn.setText("已是最新")
+                self.updatebtn.setEnabled(False)
+        else:
+            self.updatelbl.setText("获取更新失败！请稍后再试")
             self.updatebtn.setEnabled(False)
+
     def show_error(self, error):
         msg = QMessageBox()
         msg.setWindowIcon(QIcon("assets/MainIcon.ico"))
@@ -163,7 +166,8 @@ class Updater(QDialog):
             self.updatebtn.setText("更新")
             self.updatebtn.setEnabled(True)
 
-    async def break_update(self):
+    @staticmethod
+    async def break_update():
         cmd = "start /B update.bat"
         await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
         for task in asyncio.all_tasks():
@@ -327,6 +331,7 @@ class MainWindow(QMainWindow):
         self.noticed = False
         self.tray_icon = None
         uic.loadUi("assets/toolkit.ui", self)
+        self.setWindowTitle(f"Pillowe's Toolkit {ver}")
         self.resize(1440, 1080)
         self.setWindowIcon(QIcon("assets/MainIcon.ico"))
         self.browserbtn.clicked.connect(self.open_file_dialog)
@@ -349,8 +354,11 @@ class MainWindow(QMainWindow):
             self.load_new()
             self.applist.setCurrentRow(int(i))
             self.applist.currentItem().setIcon(get_icon(data[str(self.applist.row(self.applist.currentItem()))][2]))
-        if not Updater.get_latest_release_info(owner, repo)['tag_name'] == ver:
-            self.updater_on()
+        try:
+            if not Updater.get_latest_release_info(owner, repo)['tag_name'] == ver:
+                self.updater_on()
+        except Exception as e:
+            print(f"初始检查更新失败：{e}")
 
     def tray_setup(self):
         self.tray_icon = QSystemTrayIcon(self)
@@ -568,9 +576,10 @@ async def async_main():
         try:
             while True:
                 await asyncio.sleep(1)
-        except:
+        except asyncio.exceptions.CancelledError:
             print(f"Seems closed")
-
+        except Exception as e:
+            print(f"Unexcepted exit: {e}")
 
 if __name__ == "__main__":
     qasync.run(async_main())
