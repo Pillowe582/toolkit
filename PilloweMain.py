@@ -21,7 +21,7 @@ from win32com.client import Dispatch
 QCoreApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
 data_list = {}
 
-ver = "v1.6.0"
+ver = "v1.6.1"
 owner = 'pillowe'
 repo = 'toolkit'
 
@@ -86,14 +86,8 @@ class Updater(QDialog):
         uic.loadUi("assets/updater.ui", self)
         self.resize(1080, 720)
         self.setWindowIcon(QIcon("assets/MainIcon.ico"))
-        self.release_info = self.get_latest_release_info(owner, repo)
-        self.updatelbl.append(f"当前发行版为：{ver}")
-        self.updatelbl.append(f"目前最新发行版为：{self.release_info['tag_name']}")
-        self.updatelbl.append(f"\n{self.release_info['body']}")
-        if ver == self.release_info['tag_name']:
-            self.updatebtn.setText("已是最新")
-            self.updatebtn.setEnabled(False)
         self.updatebtn.clicked.connect(self.start_download)
+        self.retext()
 
     @staticmethod
     def get_latest_release_info(owner, repo):
@@ -146,7 +140,15 @@ class Updater(QDialog):
             print(f"解压操作失败: {e}")
             self.updatebtn.setText("更新")
             self.updatebtn.setEnabled(True)
-
+    def retext(self):
+        self.updatelbl.setText("")
+        self.release_info = self.get_latest_release_info(owner, repo)
+        self.updatelbl.append(f"当前发行版为：{ver}")
+        self.updatelbl.append(f"目前最新发行版为：{self.release_info['tag_name']}")
+        self.updatelbl.append(f"\n{self.release_info['body']}")
+        if ver == self.release_info['tag_name']:
+            self.updatebtn.setText("已是最新")
+            self.updatebtn.setEnabled(False)
     def show_error(self, error):
         msg = QMessageBox()
         msg.setWindowIcon(QIcon("assets/MainIcon.ico"))
@@ -169,6 +171,10 @@ class Updater(QDialog):
                 task.cancel()
         QApplication.quit()
         sys.exit()
+
+    def show(self):
+        self.retext()
+        super(Updater, self).show()
 
 
 class DownloadThread(QThread):
@@ -343,7 +349,7 @@ class MainWindow(QMainWindow):
             self.load_new()
             self.applist.setCurrentRow(int(i))
             self.applist.currentItem().setIcon(get_icon(data[str(self.applist.row(self.applist.currentItem()))][2]))
-        if Updater.get_latest_release_info(owner,repo):
+        if not Updater.get_latest_release_info(owner, repo)['tag_name'] == ver:
             self.updater_on()
 
     def tray_setup(self):
