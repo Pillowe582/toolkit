@@ -19,7 +19,7 @@ from win32com.client import Dispatch
 QCoreApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
 data_list = {}
 
-ver = "v1.7.0"
+ver = "v1.7.1"
 owner = 'pillowe'
 repo = 'toolkit'
 
