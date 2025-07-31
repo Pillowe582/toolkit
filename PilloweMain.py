@@ -2,6 +2,7 @@ import asyncio
 import json
 import os
 import sys
+import time
 import zipfile
 
 import psutil as psutil
@@ -109,6 +110,7 @@ class Updater(QDialog):
                 self.download_thread.progress_updated.connect(self.bar.setValue)  # 更新进度条
                 self.download_thread.download_finished.connect(self.on_download_finished)
                 self.download_thread.error_occurred.connect(self.show_error)
+                self.download_thread.text_display.connect(self.dldlbl.setText)
                 self.download_thread.start()
                 self.updatebtn.setText("下载中...")
                 self.updatebtn.setEnabled(False)
@@ -186,6 +188,7 @@ class DownloadThread(QThread):
     progress_updated = pyqtSignal(int)  # 进度更新信号
     download_finished = pyqtSignal(str, str, bool)  # 下载完成信号
     error_occurred = pyqtSignal(str)  # 错误信号
+    text_display = pyqtSignal(str)
 
     def __init__(self, release_info, save_path, parent=None):
         super().__init__(parent)
@@ -198,21 +201,27 @@ class DownloadThread(QThread):
             total_size = int(file_response.headers.get('content-length', 0))
             print("总大小： ", total_size)
             downloaded_size = 0
-            precentage = 0
+            loop_downloaded_size = 0
+            timestamp = time.time()
             file_name = os.path.basename(self.download_url)
             save_file = os.path.join(self.save_path, file_name)
             self.completion_size.emit(0, total_size)
             with open(save_file, 'wb') as f:
-                for chunk in file_response.iter_content(chunk_size=1024):
+                for chunk in file_response.iter_content(chunk_size=4096):
                     if chunk:
                         downloaded_size += len(chunk)
-                        if not precentage == int(downloaded_size * 100 / total_size):
-                            print(precentage + 1, "%")
+                        loop_downloaded_size += len(chunk)
+                        if int(time.time())-int(timestamp)==1:
+                            self.text_display.emit(
+                                f'{downloaded_size / 1048576:.2f} MB/{total_size / 1048576:.2f} MB; {(loop_downloaded_size / 1048526) :.2f}MB/s; {((total_size - downloaded_size) / loop_downloaded_size):.1f}s')
+                            loop_downloaded_size = 0
                         self.progress_updated.emit(downloaded_size)
-                        precentage = int(downloaded_size * 100 / total_size)
                         f.write(chunk)
+                        timestamp = time.time()
+
             self.progress_updated.emit(total_size)
             self.download_finished.emit(save_file, self.save_path, True)
+            self.text_display.emit("")
         except Exception as e:
             self.error_occurred.emit(str(e))
 
@@ -537,35 +546,38 @@ class MainWindow(QMainWindow):
         data_this = data[str(row_index)]
         data_that = data[str(row_index + 1)]
         data[str(row_index)] = data_that
-        data[str(row_index+1)] = data_this
+        data[str(row_index + 1)] = data_this
         save()
         self.refresh()
-        self.applist.setCurrentRow(row_index+1)
+        self.applist.setCurrentRow(row_index + 1)
+
     def upper(self):
         row_index = self.applist.row(self.applist.currentItem())
         data_this = data[str(row_index)]
-        data_that=data[str(row_index-1)]
-        data[str(row_index)]=data_that
-        data[str(row_index-1)]=data_this
+        data_that = data[str(row_index - 1)]
+        data[str(row_index)] = data_that
+        data[str(row_index - 1)] = data_this
         save()
         self.refresh()
-        self.applist.setCurrentRow(row_index-1)
+        self.applist.setCurrentRow(row_index - 1)
+
     def refresh(self):
-        row_index=self.applist.row(self.applist.currentItem())
+        row_index = self.applist.row(self.applist.currentItem())
         datalist = data[str(row_index)]
         self.titleinput.setPlainText(datalist[0])
         self.sitelbl.setHtml('<a href="' + datalist[1] + '">' + datalist[1] + '</a>')
         self.pathlbl.setText(datalist[2])
         self.applist.currentItem().setIcon(get_icon(datalist[2]))
         self.executebtn.setIcon(get_icon(datalist[2]))
-        if row_index==0:
+        if row_index == 0:
             self.upbtn.setEnabled(False)
         else:
             self.upbtn.setEnabled(True)
-        if row_index==len(data)-1:
+        if row_index == len(data) - 1:
             self.downbtn.setEnabled(False)
         else:
             self.downbtn.setEnabled(True)
+
 
 def modify_json_key(file_path):
     values = list(data.values())
@@ -609,6 +621,7 @@ async def async_main():
             print(f"Seems closed")
         except Exception as e:
             print(f"Unexcepted exit: {e}")
+
 
 if __name__ == "__main__":
     qasync.run(async_main())
