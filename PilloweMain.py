@@ -19,7 +19,7 @@ from win32com.client import Dispatch
 QCoreApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
 data_list = {}
 
-ver = "v1.6.2"
+ver = "v1.7.0"
 owner = 'pillowe'
 repo = 'toolkit'
 
@@ -347,6 +347,8 @@ class MainWindow(QMainWindow):
         self.settings.triggered.connect(self.settings_on)
         self.exit.triggered.connect(self.quit)
         self.executebtn.clicked.connect(self.execute)
+        self.upbtn.clicked.connect(self.upper)
+        self.downbtn.clicked.connect(self.downer)
         self.changelog = None
         self.settings = None
         self.tray_setup()
@@ -530,13 +532,40 @@ class MainWindow(QMainWindow):
             self.executebtn.setIcon(get_icon(folder))
             save()
 
+    def downer(self):
+        row_index = self.applist.row(self.applist.currentItem())
+        data_this = data[str(row_index)]
+        data_that = data[str(row_index + 1)]
+        data[str(row_index)] = data_that
+        data[str(row_index+1)] = data_this
+        save()
+        self.refresh()
+        self.applist.setCurrentRow(row_index+1)
+    def upper(self):
+        row_index = self.applist.row(self.applist.currentItem())
+        data_this = data[str(row_index)]
+        data_that=data[str(row_index-1)]
+        data[str(row_index)]=data_that
+        data[str(row_index-1)]=data_this
+        save()
+        self.refresh()
+        self.applist.setCurrentRow(row_index-1)
     def refresh(self):
-        datalist = data[str(self.applist.row(self.applist.currentItem()))]
+        row_index=self.applist.row(self.applist.currentItem())
+        datalist = data[str(row_index)]
         self.titleinput.setPlainText(datalist[0])
         self.sitelbl.setHtml('<a href="' + datalist[1] + '">' + datalist[1] + '</a>')
         self.pathlbl.setText(datalist[2])
+        self.applist.currentItem().setIcon(get_icon(datalist[2]))
         self.executebtn.setIcon(get_icon(datalist[2]))
-
+        if row_index==0:
+            self.upbtn.setEnabled(False)
+        else:
+            self.upbtn.setEnabled(True)
+        if row_index==len(data)-1:
+            self.downbtn.setEnabled(False)
+        else:
+            self.downbtn.setEnabled(True)
 
 def modify_json_key(file_path):
     values = list(data.values())
