@@ -3,6 +3,7 @@ import json
 import os
 import sys
 import time
+import typing
 import zipfile
 
 import psutil as psutil
@@ -20,9 +21,14 @@ from win32com.client import Dispatch
 QCoreApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
 data_list = {}
 
-ver = "v1.7.1"
+ver = "v1.8.0"
 owner = 'pillowe'
 repo = 'toolkit'
+if psutil.Process().name() == 'python.exe':
+    print('debugging?')
+    debugging = True
+else:
+    debugging = False
 
 
 def check_is_solo():
@@ -150,6 +156,9 @@ class Updater(QDialog):
             if ver == self.release_info['tag_name']:
                 self.updatebtn.setText("已是最新")
                 self.updatebtn.setEnabled(False)
+            else:
+                self.updatebtn.setText("更新")
+                self.updatebtn.setEnabled(True)
         else:
             self.updatelbl.setText("获取更新失败！请稍后再试")
             self.updatebtn.setEnabled(False)
@@ -211,7 +220,7 @@ class DownloadThread(QThread):
                     if chunk:
                         downloaded_size += len(chunk)
                         loop_downloaded_size += len(chunk)
-                        if int(time.time())-int(timestamp)==1:
+                        if int(time.time()) - int(timestamp) == 1:
                             self.text_display.emit(
                                 f'{downloaded_size / 1048576:.2f} MB/{total_size / 1048576:.2f} MB; {(loop_downloaded_size / 1048526) :.2f}MB/s; {((total_size - downloaded_size) / loop_downloaded_size):.1f}s')
                             loop_downloaded_size = 0
@@ -328,6 +337,13 @@ def empty_json():
 
 def surprise():
     QDesktopServices.openUrl(QUrl("https://vdse.bdstatic.com//192d9a98d782d9c74c96f09db9378d93.mp4"))
+    msg = QMessageBox()
+    msg.setWindowIcon(QIcon("assets/MainIcon.ico"))
+    msg.setIcon(QMessageBox.Information)
+    msg.setWindowTitle("你被骗了！")
+    msg.setText("欢迎来https://gitee.com/pillowe/toolkit提issue喵")
+    msg.setStandardButtons(QMessageBox.Ok)
+    msg.exec_()
 
 
 class MainWindow(QMainWindow):
@@ -350,6 +366,7 @@ class MainWindow(QMainWindow):
         self.titleinput.textChanged.connect(self.align_title)
         self.applist.currentRowChanged.connect(self.refresh)
         self.applist.doubleClicked.connect(self.execute)
+        self.applist.clear()
         self.pastebtn.clicked.connect(self.paste_site)
         self.ngguu.triggered.connect(surprise)
         self.changelog.triggered.connect(self.changelog_on)
@@ -360,16 +377,20 @@ class MainWindow(QMainWindow):
         self.downbtn.clicked.connect(self.downer)
         self.changelog = None
         self.settings = None
+        self.search.setPlainText(' ')
+        self.search.setPlainText('')
         self.tray_setup()
         for i in data:
             self.load_new()
             self.applist.setCurrentRow(int(i))
             self.applist.currentItem().setIcon(get_icon(data[str(self.applist.row(self.applist.currentItem()))][2]))
-        try:
-            if not Updater.get_latest_release_info(owner, repo)['tag_name'] == ver:
-                self.updater_on()
-        except Exception as e:
-            print(f"初始检查更新失败：{e}")
+        self.search.textChanged.connect(self.search_object)
+        if not debugging:
+            try:
+                if not Updater.get_latest_release_info(owner, repo)['tag_name'] == ver:
+                    self.updater_on()
+            except Exception as e:
+                print(f"初始检查更新失败：{e}")
 
     def tray_setup(self):
         self.tray_icon = QSystemTrayIcon(self)
@@ -469,9 +490,20 @@ class MainWindow(QMainWindow):
     def append_new(self):
         item = QListWidgetItem(QIcon("assets/MainIcon.ico"), "新增项")
         self.applist.addItem(item)
-        data[str(len(data))] = ["新增项", "https://vdse.bdstatic.com//192d9a98d782d9c74c96f09db9378d93.mp4",
+        data[str(len(data))] = ["新增项", "https://gitee.com/pillowe/toolkit",
                                 "assets/MainIcon.ico"]
         save()
+
+    def search_object(self):
+        if self.search.horizontalScrollBar().isVisible():
+            self.search.setMaximumSize(114514, 80)
+        else:
+            self.search.setMaximumSize(114514, 50)
+        for i in self.applist.findItems('', Qt.MatchContains):
+            i.setHidden(True)
+        target = self.search.toPlainText()
+        for m in self.applist.findItems(target, Qt.MatchContains):
+            m.setHidden(False)
 
     def paste_site(self):
         msg = QMessageBox()
@@ -512,6 +544,13 @@ class MainWindow(QMainWindow):
             save()
 
     def align_title(self):
+        if self.titleinput.document().blockCount() >= 2:
+            self.titleinput.setMaximumSize(114514, 120)
+        elif self.titleinput.horizontalScrollBar().isVisible():
+            self.titleinput.setMaximumSize(114514, 90)
+        else:
+            self.titleinput.setMaximumSize(114514, 50)
+
         self.applist.currentItem().setText(self.titleinput.toPlainText())
         data[str(self.applist.row(self.applist.currentItem()))][0] = self.titleinput.toPlainText()
         save()
