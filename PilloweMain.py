@@ -2,10 +2,13 @@ import asyncio
 import json
 import os
 import sys
+import traceback
+import logging
 import time
 import typing
 import zipfile
-
+import win32gui
+import win32process
 import psutil as psutil
 import pyperclip
 import qasync as qasync
@@ -21,7 +24,7 @@ from win32com.client import Dispatch
 QCoreApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
 data_list = {}
 
-ver = "v1.8.0"
+ver = "v1.9.0"
 owner = 'pillowe'
 repo = 'toolkit'
 if psutil.Process().name() == 'python.exe':
@@ -70,7 +73,8 @@ def get_icon(file_path):
     return icon_provider.icon(file_info)
 
 
-def save():
+def json_save():
+    global data
     with open('data.json', 'w') as file:
         json.dump(data, file, indent=4)
 
@@ -241,14 +245,22 @@ class Settings(QDialog):
         uic.loadUi("assets/settings.ui", self)
         self.resize(1080, 720)
         self.setWindowIcon(QIcon("assets/MainIcon.ico"))
-        self.autostart_enabled = self.check_autostart()
-        self.autostart.setChecked(self.autostart_enabled)
-        self.dialogbtn.clicked.connect(self.refresh_settings)
+        self.load_config()
+        self.dialogbtn.clicked.connect(self.apply_into_config)
 
-    def refresh_settings(self, button):
+    def load_config(self):
+        self.executeOnStarter.setChecked(self.check_autostart())
+        self.focusOutMinimizer.setChecked(data['config']['behavior']['focusOutMinimize'])
+        self.closeMinimizer.setChecked(data['config']['behavior']['closeMinimize'])
+
+    def apply_into_config(self, button):
         if self.dialogbtn.standardButton(button) == QDialogButtonBox.Apply:
-            autostart = self.autostart.isChecked()
-            self.toggle_autostart(autostart)
+            executeOnStart = self.executeOnStarter.isChecked()
+            self.toggle_autostart(executeOnStart)
+            data['config']['start'] = {'executeOnStart': executeOnStart}
+            data['config']['behavior']['focusOutMinimize'] = self.focusOutMinimizer.isChecked()
+            data['config']['behavior']['closeMinimize'] = self.closeMinimizer.isChecked()
+            json_save()
 
     @staticmethod
     def add_to_startup():
@@ -313,19 +325,19 @@ class Settings(QDialog):
 
 def empty_json():
     if os.path.exists('data.json'):
-        exist = True
+        json_exist = True
     else:
-        exist = False
+        json_exist = False
         temp = {
-            "0": ["新增项", "https://vdse.bdstatic.com//192d9a98d782d9c74c96f09db9378d93.mp4", "assets/MainIcon.ico"]}
+            "0": ["新增项", "https://gitee.com/pillowe/toolkit", "assets/MainIcon.ico"]}
         with open("data.json", 'w', encoding="utf-8") as f:
             json.dump(temp, f, ensure_ascii=False, indent=4)
 
-    print("data.json exists: ", exist)
+    print("data.json exists: ", json_exist)
     with open("data.json", "r", encoding="utf-8") as f:
         global data
         data = json.load(f)
-    if not exist:
+    if not json_exist:
         msg = QMessageBox()
         msg.setWindowIcon(QIcon("assets/MainIcon.ico"))
         msg.setIcon(QMessageBox.Question)
@@ -333,6 +345,18 @@ def empty_json():
         msg.setText("将以前的data.json文件（若有）复制到本程序根目录内")
         msg.setStandardButtons(QMessageBox.Yes)
         msg.exec_()
+
+
+def remake():
+    global data
+    local_data = data
+    local_config = {"start": {"executeOnStart": False},
+                    "behavior": {"focusOutMinimize": False, 'closeMinimize': True}}
+    if '0' in local_data:
+        print('formatting')
+        data = {'config': local_config, 'data': local_data}
+        print(data)
+        json_save()
 
 
 def surprise():
@@ -350,8 +374,11 @@ class MainWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
+        self.focused = True
         self.updater = None
+        QApplication.instance().focusChanged.connect(self.on_focus_changed)
         empty_json()
+        remake()
         modify_json_key('data.json')
         self.noticed = False
         self.tray_icon = None
@@ -380,10 +407,11 @@ class MainWindow(QMainWindow):
         self.search.setPlainText(' ')
         self.search.setPlainText('')
         self.tray_setup()
-        for i in data:
+        for i in data['data']:
             self.load_new()
             self.applist.setCurrentRow(int(i))
-            self.applist.currentItem().setIcon(get_icon(data[str(self.applist.row(self.applist.currentItem()))][2]))
+            self.applist.currentItem().setIcon(
+                get_icon(data['data'][str(self.applist.row(self.applist.currentItem()))][2]))
         self.search.textChanged.connect(self.search_object)
         if not debugging:
             try:
@@ -431,12 +459,28 @@ class MainWindow(QMainWindow):
     def restore_window(self):
         self.activateWindow()  # 激活窗口
         self.show()  # 从托盘恢复窗口
-        self.tray_icon.setVisible(False)
         self.setWindowState(Qt.WindowNoState)
 
     def closeEvent(self, event):
-        self.hide_to_tray()  # 窗口关闭时隐藏而不是退出
-        event.ignore()  # 阻止窗口完全关闭
+        if data['config']['behavior']['closeMinimize']:
+            self.hide_to_tray()  # 窗口关闭时隐藏而不是退出
+            event.ignore()  # 阻止窗口完全关闭
+        else:
+            self.quit()
+
+    def on_focus_changed(self, old, now):
+        if data['config']['behavior']['focusOutMinimize']:
+            hwnd = win32gui.GetForegroundWindow()  # 获取当前活动窗口的句柄
+            focusd_pid = win32process.GetWindowThreadProcessId(hwnd)
+            self_pid = os.getpid()
+            if not focusd_pid[1] == self_pid:
+                if self.updater:
+                    self.updater.hide()
+                if self.settings:
+                    self.settings.hide()
+                if self.changelog:
+                    self.changelog.hide()
+                self.hide_to_tray()
 
     def on_tray_icon_activated(self, reason):
         if reason == QSystemTrayIcon.Trigger:
@@ -446,7 +490,8 @@ class MainWindow(QMainWindow):
         asyncio.create_task(self.execute_async())
 
     async def execute_async(self):
-        cmd = "start" + ' "" "' + os.path.normpath(data[str(self.applist.row(self.applist.currentItem()))][2]) + '"'
+        cmd = "start" + ' "" "' + os.path.normpath(
+            data['data'][str(self.applist.row(self.applist.currentItem()))][2]) + '"'
         print('cmd ready: ', cmd)
         await asyncio.create_subprocess_shell(cmd, stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
         print('execute success')
@@ -490,9 +535,9 @@ class MainWindow(QMainWindow):
     def append_new(self):
         item = QListWidgetItem(QIcon("assets/MainIcon.ico"), "新增项")
         self.applist.addItem(item)
-        data[str(len(data))] = ["新增项", "https://gitee.com/pillowe/toolkit",
-                                "assets/MainIcon.ico"]
-        save()
+        data['data'][str(len(data['data']))] = ["新增项", "https://gitee.com/pillowe/toolkit",
+                                                "assets/MainIcon.ico"]
+        json_save()
 
     def search_object(self):
         if self.search.horizontalScrollBar().isVisible():
@@ -516,8 +561,8 @@ class MainWindow(QMainWindow):
         if response == QMessageBox.Yes:
             site = pyperclip.paste()
             self.sitelbl.setHtml('<a href="' + site + '">' + site + '</a>')
-            data[str(self.applist.row(self.applist.currentItem()))][1] = site
-            save()
+            data['data'][str(self.applist.row(self.applist.currentItem()))][1] = site
+            json_save()
 
     def remove_now(self):
         msg = QMessageBox()
@@ -531,7 +576,7 @@ class MainWindow(QMainWindow):
             current_row = self.applist.currentRow()  # 先保存当前行号
             if current_row >= 0:  # 确保有选中项
                 # 先删除数据再移除UI项
-                del data[str(current_row)]
+                del data['data'][str(current_row)]
                 self.applist.takeItem(current_row)
 
                 # 重新索引JSON数据
@@ -541,7 +586,7 @@ class MainWindow(QMainWindow):
                 if self.applist.count() > 0:
                     new_row = min(current_row, self.applist.count() - 1)
                     self.applist.setCurrentRow(new_row)
-            save()
+            json_save()
 
     def align_title(self):
         if self.titleinput.document().blockCount() >= 2:
@@ -552,8 +597,8 @@ class MainWindow(QMainWindow):
             self.titleinput.setMaximumSize(114514, 50)
 
         self.applist.currentItem().setText(self.titleinput.toPlainText())
-        data[str(self.applist.row(self.applist.currentItem()))][0] = self.titleinput.toPlainText()
-        save()
+        data['data'][str(self.applist.row(self.applist.currentItem()))][0] = self.titleinput.toPlainText()
+        json_save()
 
     def open_file_dialog(self):
         options = QFileDialog.Options()
@@ -562,11 +607,11 @@ class MainWindow(QMainWindow):
         )
         if file_name:
             self.pathlbl.setText(file_name)
-            data[str(self.applist.row(self.applist.currentItem()))][2] = file_name
+            data['data'][str(self.applist.row(self.applist.currentItem()))][2] = file_name
             get_icon(file_name)
             self.applist.currentItem().setIcon(get_icon(file_name))
             self.executebtn.setIcon(get_icon(file_name))
-            save()
+            json_save()
 
     def open_folder_dialog(self):
         folder = QFileDialog.getExistingDirectory(
@@ -574,35 +619,35 @@ class MainWindow(QMainWindow):
         )
         if folder:
             self.pathlbl.setText(folder)
-            data[str(self.applist.row(self.applist.currentItem()))][2] = folder
+            data['data'][str(self.applist.row(self.applist.currentItem()))][2] = folder
             get_icon(folder)
             self.applist.currentItem().setIcon(get_icon(folder))
             self.executebtn.setIcon(get_icon(folder))
-            save()
+            json_save()
 
     def downer(self):
         row_index = self.applist.row(self.applist.currentItem())
-        data_this = data[str(row_index)]
-        data_that = data[str(row_index + 1)]
-        data[str(row_index)] = data_that
-        data[str(row_index + 1)] = data_this
-        save()
+        data_this = data['data'][str(row_index)]
+        data_that = data['data'][str(row_index + 1)]
+        data['data'][str(row_index)] = data_that
+        data['data'][str(row_index + 1)] = data_this
+        json_save()
         self.refresh()
         self.applist.setCurrentRow(row_index + 1)
 
     def upper(self):
         row_index = self.applist.row(self.applist.currentItem())
-        data_this = data[str(row_index)]
-        data_that = data[str(row_index - 1)]
-        data[str(row_index)] = data_that
-        data[str(row_index - 1)] = data_this
-        save()
+        data_this = data['data'][str(row_index)]
+        data_that = data['data'][str(row_index - 1)]
+        data['data'][str(row_index)] = data_that
+        data['data'][str(row_index - 1)] = data_this
+        json_save()
         self.refresh()
         self.applist.setCurrentRow(row_index - 1)
 
     def refresh(self):
         row_index = self.applist.row(self.applist.currentItem())
-        datalist = data[str(row_index)]
+        datalist = data['data'][str(row_index)]
         self.titleinput.setPlainText(datalist[0])
         self.sitelbl.setHtml('<a href="' + datalist[1] + '">' + datalist[1] + '</a>')
         self.pathlbl.setText(datalist[2])
@@ -612,18 +657,19 @@ class MainWindow(QMainWindow):
             self.upbtn.setEnabled(False)
         else:
             self.upbtn.setEnabled(True)
-        if row_index == len(data) - 1:
+        if row_index == len(data['data']) - 1:
             self.downbtn.setEnabled(False)
         else:
             self.downbtn.setEnabled(True)
 
 
 def modify_json_key(file_path):
-    values = list(data.values())
-    length = len(data)
-    data.clear()
+    global data
+    values = list(data['data'].values())
+    length = len(data['data'])
+    data['data'].clear()
     for x in range(0, length):
-        data[str(x)] = values[x]
+        data['data'][str(x)] = values[x]
     with open(file_path, 'w', encoding='utf-8') as file:
         json.dump(data, file, ensure_ascii=False, indent=4)
 
@@ -646,6 +692,21 @@ def check_platform():
         else:
             print("Exit")
             return False
+
+
+def global_exception_handler(exc_type, exc_value, exc_traceback):
+    msg = QMessageBox()
+    msg.setWindowIcon(QIcon("assets/MainIcon.ico"))
+    msg.setIcon(QMessageBox.Critical)
+    msg.setWindowTitle(f"程序坠机! ")
+    msg.setText(f'{exc_type.__name__}: {str(exc_value)}')
+    # msg.setText(str(traceback.format_tb(exc_traceback)[0]))
+    msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Close)
+    msg.exec_()
+    MainWindow.quit(window)
+
+
+sys.excepthook = global_exception_handler
 
 
 async def async_main():
