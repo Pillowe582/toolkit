@@ -24,7 +24,7 @@ from win32com.client import Dispatch
 QCoreApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
 data_list = {}
 
-ver = "v1.9.0"
+ver = "v1.9.1"
 owner = 'pillowe'
 repo = 'toolkit'
 if psutil.Process().name() == 'python.exe':
@@ -329,7 +329,7 @@ def empty_json():
     else:
         json_exist = False
         temp = {
-            "0": ["新增项", "https://gitee.com/pillowe/toolkit", "assets/MainIcon.ico"]}
+            "0": ["新增项", "https://gitee.com/pillowe/toolkit", "assets/MainIcon.ico",'']}
         with open("data.json", 'w', encoding="utf-8") as f:
             json.dump(temp, f, ensure_ascii=False, indent=4)
 
@@ -357,6 +357,11 @@ def remake():
         data = {'config': local_config, 'data': local_data}
         print(data)
         json_save()
+    for i in data['data']:
+        while len(data['data'][i])<4:
+            data['data'][i].append('')
+            print('remake index: ',i)
+            json_save()
 
 
 def surprise():
@@ -391,6 +396,7 @@ class MainWindow(QMainWindow):
         self.appendbtn.clicked.connect(self.append_new)
         self.removebtn.clicked.connect(self.remove_now)
         self.titleinput.textChanged.connect(self.align_title)
+        self.noteinput.textChanged.connect(self.align_note)
         self.applist.currentRowChanged.connect(self.refresh)
         self.applist.doubleClicked.connect(self.execute)
         self.applist.clear()
@@ -406,6 +412,8 @@ class MainWindow(QMainWindow):
         self.settings = None
         self.search.setPlainText(' ')
         self.search.setPlainText('')
+        self.noteinput.setPlainText(' ')
+        self.noteinput.setPlainText('')
         self.tray_setup()
         for i in data['data']:
             self.load_new()
@@ -447,6 +455,11 @@ class MainWindow(QMainWindow):
         tray_menu.addAction(quit_action)
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.activated.connect(self.on_tray_icon_activated)
+
+    def align_note(self):
+        if self.applist.currentItem():
+            data['data'][str(self.applist.row(self.applist.currentItem()))][3]=self.noteinput.toPlainText()
+            json_save()
 
     def hide_to_tray(self):
         self.tray_icon.show()
@@ -536,7 +549,7 @@ class MainWindow(QMainWindow):
         item = QListWidgetItem(QIcon("assets/MainIcon.ico"), "新增项")
         self.applist.addItem(item)
         data['data'][str(len(data['data']))] = ["新增项", "https://gitee.com/pillowe/toolkit",
-                                                "assets/MainIcon.ico"]
+                                                "assets/MainIcon.ico",'']
         json_save()
 
     def search_object(self):
@@ -649,6 +662,7 @@ class MainWindow(QMainWindow):
         row_index = self.applist.row(self.applist.currentItem())
         datalist = data['data'][str(row_index)]
         self.titleinput.setPlainText(datalist[0])
+        self.noteinput.setPlainText(datalist[3])
         self.sitelbl.setHtml('<a href="' + datalist[1] + '">' + datalist[1] + '</a>')
         self.pathlbl.setText(datalist[2])
         self.applist.currentItem().setIcon(get_icon(datalist[2]))
@@ -700,7 +714,6 @@ def global_exception_handler(exc_type, exc_value, exc_traceback):
     msg.setIcon(QMessageBox.Critical)
     msg.setWindowTitle(f"程序坠机! ")
     msg.setText(f'{exc_type.__name__}: {str(exc_value)}')
-    # msg.setText(str(traceback.format_tb(exc_traceback)[0]))
     msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Close)
     msg.exec_()
     MainWindow.quit(window)
