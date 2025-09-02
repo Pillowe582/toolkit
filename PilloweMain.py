@@ -24,7 +24,7 @@ from win32com.client import Dispatch
 QCoreApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
 data_list = {}
 
-ver = "v1.9.1"
+ver = "v1.9.2"
 owner = 'pillowe'
 repo = 'toolkit'
 if psutil.Process().name() == 'python.exe':
@@ -432,6 +432,7 @@ class MainWindow(QMainWindow):
         self.tray_icon = QSystemTrayIcon(self)
         self.tray_icon.setIcon(QIcon("assets/MainIcon.ico"))
         self.tray_icon.setVisible(False)
+        self.tray_icon.setToolTip("Pillowe's Toolkit")
         tray_menu = QMenu(self)
         restore_action = QAction("恢复窗口", self)
         restore_action.triggered.connect(self.restore_window)
