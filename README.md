@@ -1,7 +1,7 @@
 # Pillowe's Toolkit
 
 ## 介绍
-**github老抽风颇为红温，请去gitee.com/pillowe/toolkit下载发行版**
+**github老抽风颇为红温，请去gitee.com/pillowe/toolkit下载发行版（或者也可以在这里下然后让程序自动更新）**
 
 - Pillowe's Toolkit 是一个基于 PyQt5 构建的桌面应用程序，旨在提供一个用户自定义的多功能工具集，支持文件操作、数据管理和简易的用户交互。该工具包含一个图形用户界面，并集成了系统托盘功能、数据持久化、自动更新以及简单的用户提示机制。
 - **目前只在Windows 10及以上系统运行正常！**
