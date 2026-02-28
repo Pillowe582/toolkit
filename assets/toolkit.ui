@@ -192,13 +192,13 @@
          <bool>true</bool>
         </property>
         <property name="dragEnabled">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
         <property name="dragDropOverwriteMode">
          <bool>false</bool>
         </property>
         <property name="dragDropMode">
-         <enum>QAbstractItemView::NoDragDrop</enum>
+         <enum>QAbstractItemView::InternalMove</enum>
         </property>
         <property name="alternatingRowColors">
          <bool>true</bool>
@@ -222,7 +222,7 @@
          <enum>QAbstractItemView::ScrollPerPixel</enum>
         </property>
         <property name="movement">
-         <enum>QListView::Static</enum>
+         <enum>QListView::Free</enum>
         </property>
         <property name="resizeMode">
          <enum>QListView::Adjust</enum>

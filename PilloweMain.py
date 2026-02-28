@@ -15,8 +15,8 @@ import qasync as qasync
 import requests
 import winshell
 from PyQt5 import uic  # 导入uic模块
-from PyQt5.QtCore import QFileInfo, QUrl, QCoreApplication, Qt, QThread, pyqtSignal
-from PyQt5.QtGui import QIcon, QDesktopServices
+from PyQt5.QtCore import QFileInfo, QUrl, QCoreApplication, Qt, QThread, pyqtSignal, QPoint, QMimeData
+from PyQt5.QtGui import QIcon, QDesktopServices, QDrag
 from PyQt5.QtWidgets import QMainWindow, QListWidgetItem, QFileDialog, QApplication, QMessageBox, QFileIconProvider, \
     QDialog, QSystemTrayIcon, QAction, QMenu, QDialogButtonBox
 from win32com.client import Dispatch
@@ -33,7 +33,7 @@ if psutil.Process().name() == 'python.exe':
 else:
     debugging = False
 
-
+# Migrated
 def check_is_solo():
     pid = []
     for proc in psutil.process_iter():
@@ -66,7 +66,7 @@ def check_is_solo():
         msg.exec_()
         return False
 
-
+# Migrated
 def get_icon(file_path):
     file_info = QFileInfo(file_path)
     icon_provider = QFileIconProvider()
@@ -363,7 +363,7 @@ def remake():
             print('remake index: ',i)
             json_save()
 
-
+# Migrated
 def surprise():
     QDesktopServices.openUrl(QUrl("https://vdse.bdstatic.com//192d9a98d782d9c74c96f09db9378d93.mp4"))
     msg = QMessageBox()
@@ -376,10 +376,12 @@ def surprise():
 
 
 class MainWindow(QMainWindow):
-
+    
     def __init__(self):
         super().__init__()
         self.focused = True
+        self.drag_start_pos = None
+        self.is_dragging = False
         self.updater = None
         QApplication.instance().focusChanged.connect(self.on_focus_changed)
         empty_json()
@@ -461,7 +463,7 @@ class MainWindow(QMainWindow):
         if self.applist.currentItem():
             data['data'][str(self.applist.row(self.applist.currentItem()))][3]=self.noteinput.toPlainText()
             json_save()
-
+    # Migrated
     def hide_to_tray(self):
         self.tray_icon.show()
         self.hide()  # 最小化到托盘时隐藏窗口
@@ -469,7 +471,7 @@ class MainWindow(QMainWindow):
         if not self.noticed:
             self.tray_icon.showMessage('已最小化至托盘', "本次启动期间不再提示。", QSystemTrayIcon.Information, 1000)
             self.noticed = True
-
+    # Migrated
     def restore_window(self):
         self.activateWindow()  # 激活窗口
         self.show()  # 从托盘恢复窗口
@@ -495,7 +497,7 @@ class MainWindow(QMainWindow):
                 if self.changelog:
                     self.changelog.hide()
                 self.hide_to_tray()
-
+    # Migrated
     def on_tray_icon_activated(self, reason):
         if reason == QSystemTrayIcon.Trigger:
             self.restore_window()
@@ -677,6 +679,53 @@ class MainWindow(QMainWindow):
         else:
             self.downbtn.setEnabled(True)
 
+    def mousePressEvent(self, event):
+        """处理鼠标按下事件"""
+        if event.button() == Qt.LeftButton:
+            self.drag_start_pos = event.pos()
+            self.is_dragging = False
+        super().mousePressEvent(event)
+    
+    def mouseMoveEvent(self, event):
+        """处理鼠标移动事件"""
+        if event.buttons() & Qt.LeftButton and self.drag_start_pos:
+            # 计算移动距离
+            distance = (event.pos() - self.drag_start_pos).manhattanLength()
+            
+            # 如果移动距离超过阈值，开始拖拽
+            if distance > QApplication.startDragDistance():
+                self.is_dragging = True
+                self.start_drag_operation()
+        super().mouseMoveEvent(event)
+    
+    def mouseReleaseEvent(self, event):
+        """处理鼠标释放事件"""
+        if event.button() == Qt.LeftButton:
+            self.drag_start_pos = None
+            self.is_dragging = False
+        super().mouseReleaseEvent(event)
+    
+    def start_drag_operation(self):
+        """开始拖拽操作"""
+        current_item = self.applist.currentItem()
+        if current_item:
+            drag = QDrag(self)
+            mime_data = QMimeData()
+            
+            # 设置拖拽数据
+            item_index = self.applist.row(current_item)
+            mime_data.setText(str(item_index))
+            
+            drag.setMimeData(mime_data)
+            drag.setPixmap(current_item.icon().pixmap(32, 32))
+            drag.setHotSpot(QPoint(16, 16))
+            
+            # 执行拖拽
+            result = drag.exec_(Qt.MoveAction)
+            
+            if result == Qt.MoveAction:
+                print("拖拽完成")
+                
 
 def modify_json_key(file_path):
     global data
