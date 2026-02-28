@@ -28,6 +28,9 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowTitle(QString("Pillowe's Toolkit v%1").arg(VERSION));
     setWindowIcon(QIcon(":/assets/MainIcon.ico"));
 
+    // 监听事件
+    ui->itemlist->viewport()->installEventFilter(this);
+
     // 绑定各种信号和槽
     connect(ui->changelog, &QAction::triggered, this, &MainWindow::showChangelog);
     connect(ui->ngguu, &QAction::triggered, this, &MainWindow::showSurprise);
@@ -35,6 +38,7 @@ MainWindow::MainWindow(QWidget *parent)
             { addItem(ui->itemlist->currentIndex().row() + 1); });
     connect(ui->removebtn, &QPushButton::clicked, this, [this]()
             { removeItem(ui->itemlist->currentIndex().row()); });
+
     // 加载列表数据
     loadList();
 }
@@ -42,6 +46,7 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow()
 {
     qDebug() << "主界面将关闭";
+    saveSort();
     delete db; // 清理数据库对象
     delete ui;
 }
@@ -160,12 +165,11 @@ void MainWindow::addItem(int targetRow)
         qDebug() << "添加项目失败：" << db->model->lastError().text();
         return;
     }
-    db->model->setData(db->model->index(0, 1), "新增项");
-    db->model->setData(db->model->index(0, 2), 0);
-    db->model->setData(db->model->index(0, 4), ":/assets/MainIcon.ico");
-
+    db->model->setData(db->model->index(targetRow, 1), "新增项");
+    db->model->setData(db->model->index(targetRow, 2), 0);
+    db->model->setData(db->model->index(targetRow, 4), ":/assets/MainIcon.ico");
     saveSort();
-    qDebug() << "项目已添加";
+    qDebug() << "项目已添加于 " << targetRow << " 行";
 }
 
 void MainWindow::removeItem(int targetRow)
@@ -177,14 +181,32 @@ void MainWindow::removeItem(int targetRow)
         return;
     }
     saveSort();
-    qDebug() << "项目已删除";
+    qDebug() << "第 " << targetRow << " 行已删除";
 }
 
 void MainWindow::saveSort()
 {
-    db->model->submitAll();
     for (int i = 0; i < db->model->rowCount(); i++)
         db->model->setData(db->model->index(i, 8), i);
     qDebug() << "正在保存至数据库";
-    db->model->submitAll();
+    if (db->model->submitAll())
+    {
+        qDebug() << "保存成功";
+        return;
+    }
+    QMessageBox::critical(this, "数据库保存失败", "bug是凉爽的夏夜，可供人无忧地安眠。");
+    qDebug() << "保存失败：" << db->model->lastError().text();
+    return;
+}
+
+bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+{
+
+    if (obj == ui->itemlist->viewport() && event->type() == QEvent::Drop)
+    {
+        qDebug() << "捕捉到拖放事件";
+        QDropEvent *dropEvent = static_cast<QDropEvent *>(event);
+        db->model->submitAll();
+    }
+    return QObject::eventFilter(obj, event);
 }

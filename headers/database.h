@@ -4,6 +4,7 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlTableModel>
+
 class ToolkitModel : public QSqlTableModel
 {
     Q_OBJECT
@@ -16,7 +17,7 @@ public:
         Qt::ItemFlags f = QSqlTableModel::flags(index);
         if (index.isValid())
         {
-            // 核心权限：允许拖动、允许在其上放下
+            // 核心权限：允许拖动
             f |= Qt::ItemIsDragEnabled;
         }
         else
@@ -30,6 +31,10 @@ public:
     {
         // 明确告诉 View，本模型支持“移动”动作
         return Qt::MoveAction;
+    }
+    QStringList mimeTypes() const override
+    {
+        return {"application/x-qabstractitemmodeldatalist"};
     }
 };
 
