@@ -22,14 +22,13 @@ MainWindow::MainWindow(QWidget *parent)
     {
         QMessageBox::critical(this, "数据库初始化失败", "bug是凉爽的夏夜，可供人无忧地安眠。");
     }
+    // 加载列表数据
+    loadList();
 
-    setupTray();
     // 窗口设置
+    setupTray();
     setWindowTitle(QString("Pillowe's Toolkit v%1").arg(VERSION));
     setWindowIcon(QIcon(":/assets/MainIcon.ico"));
-
-    // 监听事件
-    ui->itemlist->viewport()->installEventFilter(this);
 
     // 绑定各种信号和槽
     connect(ui->changelog, &QAction::triggered, this, &MainWindow::showChangelog);
@@ -38,9 +37,12 @@ MainWindow::MainWindow(QWidget *parent)
             { addItem(ui->itemlist->currentIndex().row() + 1); });
     connect(ui->removebtn, &QPushButton::clicked, this, [this]()
             { removeItem(ui->itemlist->currentIndex().row()); });
-
-    // 加载列表数据
-    loadList();
+    connect(ui->itemlist->selectionModel(), &QItemSelectionModel::currentRowChanged, this, [this](const QModelIndex &current, const QModelIndex &previous)
+            { onCurrentRowChanged(current, previous); });
+    connect(ui->upbtn, &QPushButton::clicked, this, [this]()
+            { swapItems(ui->itemlist->currentIndex().row(), -1); });
+    connect(ui->downbtn, &QPushButton::clicked, this, [this]()
+            { swapItems(ui->itemlist->currentIndex().row(), 1); });
 }
 
 MainWindow::~MainWindow()
@@ -199,14 +201,17 @@ void MainWindow::saveSort()
     return;
 }
 
-bool MainWindow::eventFilter(QObject *obj, QEvent *event)
+void MainWindow::swapItems(int currentRow, int direction)
 {
+    db->model->setData(db->model->index(currentRow, 8), currentRow + direction);
+    db->model->setData(db->model->index(currentRow + direction, 8), currentRow);
+    db->model->submitAll();
+    QModelIndex nextSelection = db->model->index(currentRow + direction, 1);
+    ui->itemlist->setCurrentIndex(nextSelection);
+    ui->itemlist->selectionModel()->select(nextSelection, QItemSelectionModel::ClearAndSelect);
+}
 
-    if (obj == ui->itemlist->viewport() && event->type() == QEvent::Drop)
-    {
-        qDebug() << "捕捉到拖放事件";
-        QDropEvent *dropEvent = static_cast<QDropEvent *>(event);
-        db->model->submitAll();
-    }
-    return QObject::eventFilter(obj, event);
+void MainWindow::onCurrentRowChanged(const QModelIndex &current, const QModelIndex &previous)
+{
+    qDebug() << "当前行已切换至 " << current.row();
 }

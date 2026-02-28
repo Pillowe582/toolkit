@@ -30,6 +30,7 @@ private:
     void addItem(int);
     void removeItem(int);
     void saveSort();
+    void swapItems(int, int);
 private slots:
     void showChangelog();
     void showSurprise();
@@ -38,7 +39,7 @@ private slots:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
-    bool eventFilter(QObject *obj, QEvent *event) override;
+    void onCurrentRowChanged(const QModelIndex &current, const QModelIndex &previous);
 };
 
 #endif
