@@ -31,8 +31,10 @@ MainWindow::MainWindow(QWidget *parent)
     // 绑定各种信号和槽
     connect(ui->changelog, &QAction::triggered, this, &MainWindow::showChangelog);
     connect(ui->ngguu, &QAction::triggered, this, &MainWindow::showSurprise);
-    connect(ui->appendbtn, &QPushButton::clicked, this, &MainWindow::addItem);
-
+    connect(ui->appendbtn, &QPushButton::clicked, this, [this]()
+            { addItem(ui->itemlist->currentIndex().row() + 1); });
+    connect(ui->removebtn, &QPushButton::clicked, this, [this]()
+            { removeItem(ui->itemlist->currentIndex().row()); });
     // 加载列表数据
     loadList();
 }
@@ -150,10 +152,10 @@ void MainWindow::loadList()
     qDebug() << "列表已加载完毕";
 }
 
-void MainWindow::addItem()
+void MainWindow::addItem(int targetRow)
 {
     qDebug() << "开始添加项目";
-    if (!db->model->insertRow(0))
+    if (!db->model->insertRow(targetRow))
     {
         qDebug() << "添加项目失败：" << db->model->lastError().text();
         return;
@@ -164,6 +166,18 @@ void MainWindow::addItem()
 
     saveSort();
     qDebug() << "项目已添加";
+}
+
+void MainWindow::removeItem(int targetRow)
+{
+    qDebug() << "开始删除项目";
+    if (!db->model->removeRow(targetRow))
+    {
+        qDebug() << "删除项目失败：" << db->model->lastError().text();
+        return;
+    }
+    saveSort();
+    qDebug() << "项目已删除";
 }
 
 void MainWindow::saveSort()

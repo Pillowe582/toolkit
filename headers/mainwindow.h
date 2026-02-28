@@ -27,7 +27,8 @@ private:
     void setupTray();
     bool hasMinimizeNoticed = false;
     void loadList();
-    void addItem();
+    void addItem(int);
+    void removeItem(int);
     void saveSort();
 private slots:
     void showChangelog();

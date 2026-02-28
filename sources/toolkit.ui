@@ -148,7 +148,7 @@
          <bool>true</bool>
         </property>
         <property name="editTriggers">
-         <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+         <set>QAbstractItemView::EditTrigger::DoubleClicked|QAbstractItemView::EditTrigger::EditKeyPressed</set>
         </property>
         <property name="showDropIndicator" stdset="0">
          <bool>true</bool>
@@ -160,7 +160,7 @@
          <bool>false</bool>
         </property>
         <property name="dragDropMode">
-         <enum>QAbstractItemView::InternalMove</enum>
+         <enum>QAbstractItemView::DragDropMode::InternalMove</enum>
         </property>
         <property name="defaultDropAction">
          <enum>Qt::DropAction::MoveAction</enum>
@@ -187,7 +187,7 @@
          <enum>QAbstractItemView::ScrollMode::ScrollPerPixel</enum>
         </property>
         <property name="movement">
-         <enum>QListView::Movement::Free</enum>
+         <enum>QListView::Movement::Snap</enum>
         </property>
         <property name="resizeMode">
          <enum>QListView::ResizeMode::Adjust</enum>
@@ -1020,7 +1020,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
          </font>
         </property>
         <property name="tabletTracking">
-           <bool>true</bool>
+         <bool>true</bool>
         </property>
         <property name="styleSheet">
          <string notr="true">text-align: center;

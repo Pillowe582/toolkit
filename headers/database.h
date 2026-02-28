@@ -17,7 +17,7 @@ public:
         if (index.isValid())
         {
             // 核心权限：允许拖动、允许在其上放下
-            f |= Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled;
+            f |= Qt::ItemIsDragEnabled;
         }
         else
         {
@@ -29,17 +29,7 @@ public:
     Qt::DropActions supportedDropActions() const override
     {
         // 明确告诉 View，本模型支持“移动”动作
-        return Qt::CopyAction | Qt::MoveAction;
-    }
-    QStringList mimeTypes() const override
-    {
-        return {"application/x-qabstractitemmodeldatalist"};
-    }
-
-    QMimeData *mimeData(const QModelIndexList &indexes) const override
-    {
-        QMimeData *mimeData = QSqlTableModel::mimeData(indexes);
-        return mimeData;
+        return Qt::MoveAction;
     }
 };
 

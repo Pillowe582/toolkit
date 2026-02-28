@@ -106,7 +106,7 @@ bool Database::setListModel()
 {
     this->model = new ToolkitModel(this, db);
     model->setTable("items");
-    model->setEditStrategy(ToolkitModel::OnFieldChange);
+    model->setEditStrategy(ToolkitModel::OnManualSubmit);
     int colindex = model->fieldIndex("row");
     model->setSort(colindex, Qt::AscendingOrder);
     if (model->select())
