@@ -171,6 +171,7 @@ void MainWindow::addItem(int targetRow)
     db->model->setData(db->model->index(targetRow, 2), 0);
     db->model->setData(db->model->index(targetRow, 4), ":/assets/MainIcon.ico");
     saveSort();
+    selectRow(targetRow);
     qDebug() << "项目已添加于 " << targetRow << " 行";
 }
 
@@ -203,15 +204,24 @@ void MainWindow::saveSort()
 
 void MainWindow::swapItems(int currentRow, int direction)
 {
-    db->model->setData(db->model->index(currentRow, 8), currentRow + direction);
-    db->model->setData(db->model->index(currentRow + direction, 8), currentRow);
+    int targetRow = currentRow + direction;
+    if (targetRow < 0 || targetRow >= db->model->rowCount())
+    {
+        return;
+    }
+    db->model->setData(db->model->index(currentRow, 8), targetRow);
+    db->model->setData(db->model->index(targetRow, 8), currentRow);
     db->model->submitAll();
-    QModelIndex nextSelection = db->model->index(currentRow + direction, 1);
-    ui->itemlist->setCurrentIndex(nextSelection);
-    ui->itemlist->selectionModel()->select(nextSelection, QItemSelectionModel::ClearAndSelect);
+    selectRow(targetRow);
 }
-
 void MainWindow::onCurrentRowChanged(const QModelIndex &current, const QModelIndex &previous)
 {
     qDebug() << "当前行已切换至 " << current.row();
+}
+
+void MainWindow::selectRow(int row)
+{
+    QModelIndex nextSelection = db->model->index(row, 1);
+    ui->itemlist->setCurrentIndex(nextSelection);
+    ui->itemlist->selectionModel()->select(nextSelection, QItemSelectionModel::ClearAndSelect);
 }

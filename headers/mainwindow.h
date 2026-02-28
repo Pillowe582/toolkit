@@ -31,6 +31,7 @@ private:
     void removeItem(int);
     void saveSort();
     void swapItems(int, int);
+    void selectRow(int);
 private slots:
     void showChangelog();
     void showSurprise();
