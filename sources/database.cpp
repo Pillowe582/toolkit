@@ -42,7 +42,7 @@ bool Database::init()
     }
     qDebug() << "数据库初始化成功，文件为" << db.databaseName();
 
-    return setListModel();
+    return setModels();
 }
 
 QVariant Database::getSetting(QString name, const QVariant &defaultValue)
@@ -59,19 +59,37 @@ QVariant Database::getSetting(QString name, const QVariant &defaultValue)
     {
         return query.value(0);
     }
-    qDebug() << "未找到" << name << "的设置项";
+    setSetting(name, defaultValue);
     return defaultValue;
 }
 
 bool Database::setSetting(QString name, QVariant value)
 {
     QSqlQuery query(db);
-    query.prepare("INSERT INTO settings (name, value) VALUES (:name, :value)");
+    query.prepare("SELECT COUNT(*) FROM settings WHERE name = :name");
     query.bindValue(":name", name);
-    query.bindValue(":value", value);
     if (!query.exec())
     {
-        qDebug() << "设置失败： " << query.lastError().text();
+        qDebug() << "查询settings表失败： " << query.lastError().text();
+        return false;
+    }
+    query.next();
+    bool isExist = query.value(0).toInt() > 0;
+    if (isExist)
+    {
+        query.prepare("UPDATE settings SET value = :value WHERE name = :name");
+        query.bindValue(":name", name);
+        query.bindValue(":value", value);
+    }
+    else
+    {
+        query.prepare("INSERT INTO settings (name, value) VALUES (:name, :value)");
+        query.bindValue(":name", name);
+        query.bindValue(":value", value);
+    }
+    if (!query.exec())
+    {
+        qDebug() << "设置settings失败： " << query.lastError().text();
         return false;
     }
     return true;
@@ -102,18 +120,19 @@ bool Database::setSetting(QString name, QVariant value)
 //     return list;
 // }
 
-bool Database::setListModel()
+bool Database::setModels()
 {
-    this->model = new ToolkitModel(this, db);
-    model->setTable("items");
-    model->setEditStrategy(ToolkitModel::OnManualSubmit);
-    int colindex = model->fieldIndex("row");
-    model->setSort(colindex, Qt::AscendingOrder);
-    if (model->select())
+    this->itemsModel = new ToolkitModel(this, db);
+    itemsModel->setTable("items");
+    itemsModel->setEditStrategy(ToolkitModel::OnManualSubmit);
+    int colindex = itemsModel->fieldIndex("row");
+    itemsModel->setSort(colindex, Qt::AscendingOrder);
+    if (!itemsModel->select())
     {
-        qDebug() << "设置items表模型成功";
-        return true;
+        qDebug() << "设置items表模型失败： " << itemsModel->lastError().text();
+        return false;
     }
-    qDebug() << "设置items表模型失败： " << model->lastError().text();
-    return false;
+    qDebug() << "设置items表模型成功";
+
+    return true;
 }

@@ -38,8 +38,14 @@ private:
     void saveSort();
     void swapItems(int, int);
     void selectRow(int);
+    // 设置项
+    bool executeOnStart;
+    bool focusOutMinimize;
+    bool closeMinimize;
+    void readSettings();
 private slots:
-    void showChangelog();
+    void
+    showChangelog();
     void showSettings();
     void minimizeToTray();
     void onTrayClicked(QSystemTrayIcon::ActivationReason reason);

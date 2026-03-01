@@ -46,10 +46,11 @@ public:
     QVariant getSetting(QString name, const QVariant &defaultValue);
     bool setSetting(QString name, QVariant value);
     QList<QVariantMap> getAllItems();
-    ToolkitModel *model;
+    ToolkitModel *itemsModel;
+    QSqlTableModel *settingsModel;
 
 private:
     QSqlDatabase db;
-    bool setListModel();
+    bool setModels();
 };
 #endif

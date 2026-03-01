@@ -56,17 +56,17 @@ MainWindow::MainWindow(QWidget *parent)
             { swapItems(ui->itemlist->currentIndex().row(), -1); });
     connect(ui->downbtn, &QPushButton::clicked, this, [this]()
             { swapItems(ui->itemlist->currentIndex().row(), 1); });
-
     connect(ui->titleinput, &QPlainTextEdit::textChanged, this, [this]()
-            { db->model->setData(db->model->index(ui->itemlist->currentIndex().row(), 1), ui->titleinput->toPlainText()); });
+            { db->itemsModel->setData(db->itemsModel->index(ui->itemlist->currentIndex().row(), 1), ui->titleinput->toPlainText()); });
     connect(ui->noteinput, &QPlainTextEdit::textChanged, this, [this]()
-            { db->model->setData(db->model->index(ui->itemlist->currentIndex().row(), 5), ui->noteinput->toPlainText()); });
+            { db->itemsModel->setData(db->itemsModel->index(ui->itemlist->currentIndex().row(), 5), ui->noteinput->toPlainText()); });
     connect(ui->pastebtn, &QPushButton::clicked, this, &MainWindow::pasteClipboard);
-
     connect(ui->executebtn, &QPushButton::clicked, this, [this]()
-            { QDesktopServices::openUrl(QUrl::fromLocalFile(db->model->data(db->model->index(ui->itemlist->currentIndex().row(), 7)).toString())); });
+            { QDesktopServices::openUrl(QUrl::fromLocalFile(db->itemsModel->data(db->itemsModel->index(ui->itemlist->currentIndex().row(), 7)).toString())); });
     qDebug()
         << timer.elapsed() << "信号与槽绑定完毕";
+
+    readSettings();
 }
 
 MainWindow::~MainWindow()
@@ -79,8 +79,11 @@ MainWindow::~MainWindow()
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
-    event->ignore();
-    minimizeToTray();
+    if (closeMinimize)
+    {
+        event->ignore();
+        minimizeToTray();
+    }
 }
 
 // MARK: -Changelog
@@ -106,14 +109,14 @@ void MainWindow::showSettings()
     qDebug() << timer.elapsed() << "正在打开设置";
     if (settings == nullptr)
     {
-        settings = new Settings(this);
-    }
-    if (settings->exec() == QDialog::Rejected)
-    {
-        qDebug() << timer.elapsed() << "设置已关闭";
+        settings = new Settings(this, db);
+        connect(settings, &Settings::settingsSaved, this, [this]()
+                { readSettings(); });
     }
     settings->raise();
     settings->activateWindow();
+    if (settings->exec())
+        qDebug() << timer.elapsed() << "设置已关闭";
 }
 
 // MARK: -Tray
@@ -191,22 +194,22 @@ void MainWindow::setupTray()
 void MainWindow::loadList()
 {
     qDebug() << timer.elapsed() << "开始加载列表";
-    ui->itemlist->setModel(db->model);
+    ui->itemlist->setModel(db->itemsModel);
     ui->itemlist->setModelColumn(1);
-    qDebug() << timer.elapsed() << "权限检查：" << db->model->flags(db->model->index(0, 1));
+    qDebug() << timer.elapsed() << "权限检查：" << db->itemsModel->flags(db->itemsModel->index(0, 1));
     qDebug() << timer.elapsed() << "列表已加载完毕";
 }
 
 void MainWindow::addItem(int targetRow)
 {
-    if (!db->model->insertRow(targetRow))
+    if (!db->itemsModel->insertRow(targetRow))
     {
-        qDebug() << timer.elapsed() << "添加项目失败：" << db->model->lastError().text();
+        qDebug() << timer.elapsed() << "添加项目失败：" << db->itemsModel->lastError().text();
         return;
     }
-    db->model->setData(db->model->index(targetRow, 1), "新增项");
-    db->model->setData(db->model->index(targetRow, 2), 0);
-    db->model->setData(db->model->index(targetRow, 4), ":/assets/MainIcon.ico");
+    db->itemsModel->setData(db->itemsModel->index(targetRow, 1), "新增项");
+    db->itemsModel->setData(db->itemsModel->index(targetRow, 2), 0);
+    db->itemsModel->setData(db->itemsModel->index(targetRow, 4), ":/assets/MainIcon.ico");
     saveSort();
     selectRow(targetRow);
     qDebug() << timer.elapsed() << "项目已添加于 " << targetRow << " 行";
@@ -214,12 +217,12 @@ void MainWindow::addItem(int targetRow)
 
 void MainWindow::removeItem(int targetRow)
 {
-    QString title = db->model->data(db->model->index(targetRow, 1)).toString();
+    QString title = db->itemsModel->data(db->itemsModel->index(targetRow, 1)).toString();
     if (QMessageBox::warning(this, QString("删除项目%1？").arg(title), "这样将会永久失去这一项！（真的很久！）", QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
         return;
-    if (!db->model->removeRow(targetRow))
+    if (!db->itemsModel->removeRow(targetRow))
     {
-        qDebug() << timer.elapsed() << "删除项目失败：" << db->model->lastError().text();
+        qDebug() << timer.elapsed() << "删除项目失败：" << db->itemsModel->lastError().text();
         return;
     }
     saveSort();
@@ -228,37 +231,37 @@ void MainWindow::removeItem(int targetRow)
 
 void MainWindow::saveSort()
 {
-    for (int i = 0; i < db->model->rowCount(); i++)
-        db->model->setData(db->model->index(i, 8), i);
+    for (int i = 0; i < db->itemsModel->rowCount(); i++)
+        db->itemsModel->setData(db->itemsModel->index(i, 8), i);
     qDebug() << timer.elapsed() << "正在保存至数据库";
-    if (db->model->submitAll())
+    if (db->itemsModel->submitAll())
     {
         return;
     }
     QMessageBox::critical(this, "数据库保存失败", "bug是凉爽的夏夜，可供人无忧地安眠。");
-    qDebug() << timer.elapsed() << "保存失败：" << db->model->lastError().text();
+    qDebug() << timer.elapsed() << "保存失败：" << db->itemsModel->lastError().text();
     return;
 }
 
 void MainWindow::swapItems(int currentRow, int direction)
 {
     int targetRow = currentRow + direction;
-    if (targetRow < 0 || targetRow >= db->model->rowCount())
+    if (targetRow < 0 || targetRow >= db->itemsModel->rowCount())
     {
         return;
     }
-    db->model->setData(db->model->index(currentRow, 8), targetRow);
-    db->model->setData(db->model->index(targetRow, 8), currentRow);
-    db->model->submitAll();
+    db->itemsModel->setData(db->itemsModel->index(currentRow, 8), targetRow);
+    db->itemsModel->setData(db->itemsModel->index(targetRow, 8), currentRow);
+    db->itemsModel->submitAll();
     selectRow(targetRow);
 }
 void MainWindow::onCurrentRowChanged(const QModelIndex &current, const QModelIndex &previous)
 {
 
-    ui->titleinput->setPlainText(db->model->data(db->model->index(current.row(), 1)).toString());
-    ui->noteinput->setPlainText(db->model->data(db->model->index(current.row(), 5)).toString());
-    ui->sitelbl->setHtml(QString("<a href=\"%1\">%1</a>").arg(db->model->data(db->model->index(current.row(), 6)).toString()));
-    QString path = db->model->data(db->model->index(current.row(), 7)).toString();
+    ui->titleinput->setPlainText(db->itemsModel->data(db->itemsModel->index(current.row(), 1)).toString());
+    ui->noteinput->setPlainText(db->itemsModel->data(db->itemsModel->index(current.row(), 5)).toString());
+    ui->sitelbl->setHtml(QString("<a href=\"%1\">%1</a>").arg(db->itemsModel->data(db->itemsModel->index(current.row(), 6)).toString()));
+    QString path = db->itemsModel->data(db->itemsModel->index(current.row(), 7)).toString();
     ui->pathlbl->setPlainText(path);
     QIcon icon = iconProvider.icon(QFileInfo(path));
     ui->executebtn->setIcon(icon);
@@ -267,7 +270,7 @@ void MainWindow::onCurrentRowChanged(const QModelIndex &current, const QModelInd
 
 void MainWindow::selectRow(int row)
 {
-    QModelIndex nextSelection = db->model->index(row, 1);
+    QModelIndex nextSelection = db->itemsModel->index(row, 1);
     ui->itemlist->setCurrentIndex(nextSelection);
     ui->itemlist->selectionModel()->select(nextSelection, QItemSelectionModel::ClearAndSelect);
 }
@@ -286,8 +289,8 @@ void MainWindow::pasteClipboard()
     if (QMessageBox::question(this, "粘贴？！", "要粘贴并覆盖吗                 ", QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes)
     {
 
-        db->model->setData(db->model->index(ui->itemlist->currentIndex().row(), 6), text);
-        db->model->submitAll();
+        db->itemsModel->setData(db->itemsModel->index(ui->itemlist->currentIndex().row(), 6), text);
+        db->itemsModel->submitAll();
         ui->sitelbl->setHtml(QString("<a href=\"%1\">%1</a>").arg(text));
         return;
     }
@@ -321,9 +324,17 @@ void MainWindow::openFileDialog(int type)
     }
     int currentRow = ui->itemlist->currentIndex().row();
 
-    db->model->setData(db->model->index(currentRow, 7), path);
+    db->itemsModel->setData(db->itemsModel->index(currentRow, 7), path);
 
-    db->model->submitAll();
+    db->itemsModel->submitAll();
     selectRow(currentRow);
     ui->pathlbl->setPlainText(path);
+}
+
+void MainWindow::readSettings()
+{
+    // 读取设置
+    executeOnStart = db->getSetting("executeOnStart", false).toBool();
+    focusOutMinimize = db->getSetting("focusOutMinimize", true).toBool();
+    closeMinimize = db->getSetting("closeMinimize", true).toBool();
 }
