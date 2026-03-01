@@ -2,3 +2,7 @@
 /编译.bat
 build/
 .idea/
+.venv/
+.vscode/
+test/
+app.rc

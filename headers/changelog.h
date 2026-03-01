@@ -19,6 +19,7 @@ public:
 
 private:
     Ui::Changelog *ui;
+    void showUpdater();
 };
 
 #endif // CHANGELOG_H

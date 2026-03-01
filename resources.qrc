@@ -2,5 +2,6 @@
 <RCC version="1.0">
     <qresource prefix="/">
         <file>assets/MainIcon.ico</file>
+        <file>assets/UPDATE.md</file>
     </qresource>
 </RCC>

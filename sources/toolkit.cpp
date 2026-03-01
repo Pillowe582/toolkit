@@ -11,6 +11,7 @@
 #include <QClipboard>
 #include <QTimer>
 #include <QSettings>
+#include "updater.h"
 
 // MARK: -Basic Functions
 // 必须写成 MainWindow:: 否则编译器认为这是个全局函数，而不是类的成员
@@ -39,35 +40,44 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowIcon(QIcon(":/assets/MainIcon.ico"));
     qDebug() << timer.elapsed() << "窗口设置完毕";
     // 绑定各种信号和槽
+    /* Menu btns */
     connect(ui->changelog, &QAction::triggered, this, &MainWindow::showChangelog);
     connect(ui->settings, &QAction::triggered, this, &MainWindow::showSettings);
-    connect(ui->filebtn, &QPushButton::clicked, this, [this]()
-            { openFileDialog(0); });
-    connect(ui->folderbtn, &QPushButton::clicked, this, [this]()
-            { openFileDialog(1); });
     connect(ui->ngguu, &QAction::triggered, this, []()
             { QDesktopServices::openUrl(QUrl("https://vdse.bdstatic.com//192d9a98d782d9c74c96f09db9378d93.mp4")); });
+    connect(ui->exit, &QAction::triggered, this, &QApplication::quit);
+    /* List btns */
     connect(ui->appendbtn, &QPushButton::clicked, this, [this]()
             { addItem(ui->itemlist->currentIndex().row() + 1); });
     connect(ui->removebtn, &QPushButton::clicked, this, [this]()
             { removeItem(ui->itemlist->currentIndex().row()); });
-    connect(ui->itemlist->selectionModel(), &QItemSelectionModel::currentRowChanged, this, [this](const QModelIndex &current, const QModelIndex &previous)
-            { onCurrentRowChanged(current, previous); });
     connect(ui->upbtn, &QPushButton::clicked, this, [this]()
             { swapItems(ui->itemlist->currentIndex().row(), -1); });
     connect(ui->downbtn, &QPushButton::clicked, this, [this]()
             { swapItems(ui->itemlist->currentIndex().row(), 1); });
+    /* Info btns */
     connect(ui->titleinput, &QPlainTextEdit::textChanged, this, [this]()
             { db->itemsModel->setData(db->itemsModel->index(ui->itemlist->currentIndex().row(), 1), ui->titleinput->toPlainText()); });
     connect(ui->noteinput, &QPlainTextEdit::textChanged, this, [this]()
             { db->itemsModel->setData(db->itemsModel->index(ui->itemlist->currentIndex().row(), 5), ui->noteinput->toPlainText()); });
     connect(ui->pastebtn, &QPushButton::clicked, this, &MainWindow::pasteClipboard);
+    connect(ui->filebtn, &QPushButton::clicked, this, [this]()
+            { openFileDialog(0); });
+    connect(ui->folderbtn, &QPushButton::clicked, this, [this]()
+            { openFileDialog(1); });
     connect(ui->executebtn, &QPushButton::clicked, this, [this]()
             { QDesktopServices::openUrl(QUrl::fromLocalFile(db->itemsModel->data(db->itemsModel->index(ui->itemlist->currentIndex().row(), 7)).toString())); });
-    qDebug()
-        << timer.elapsed() << "信号与槽绑定完毕";
+
+    /* Other Signals*/
+    connect(ui->itemlist->selectionModel(), &QItemSelectionModel::currentRowChanged, this, [this](const QModelIndex &current, const QModelIndex &previous)
+            { onCurrentRowChanged(current, previous); });
+
+    qDebug() << timer.elapsed() << "信号与槽绑定完毕";
 
     readSettings();
+    qDebug() << timer.elapsed() << "已读取设置";
+    Updater::checkForUpdates(VERSION);
+    qDebug() << timer.elapsed() << "检查更新完毕";
 }
 
 MainWindow::~MainWindow()

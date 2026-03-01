@@ -9,9 +9,10 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
 # 2. 找到 Qt 库 (以 Qt6 为例)
-find_package(Qt6 REQUIRED COMPONENTS Widgets Sql)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Sql Network)
 
 set(AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/assets")
+set(WIN_RESOURCES app.rc)
 # 3. 添加源文件
 add_executable(Toolkit 
     #头文件
@@ -19,6 +20,7 @@ add_executable(Toolkit
     headers/changelog.h
     headers/database.h
     headers/settings.h
+    headers/updater.h
 
     #源文件
     sources/main.cpp
@@ -26,17 +28,21 @@ add_executable(Toolkit
     sources/changelog.cpp
     sources/database.cpp
     sources/settings.cpp
+    sources/updater.cpp
 
     #UI文件
     assets/toolkit.ui
     assets/changelog.ui
     assets/settings.ui
+    assets/updater.ui
 
     #资源文件
     resources.qrc
+    ${WIN_RESOURCES}
 )
-
+set_target_properties(${PROJECT_NAME} PROPERTIES 
+    OUTPUT_NAME "PilloweMain")
 # 4. 链接 Qt 库
-target_link_libraries(Toolkit PRIVATE Qt6::Widgets Qt6::Sql)
+target_link_libraries(Toolkit PRIVATE Qt6::Widgets Qt6::Sql Qt6::Network)
 
 target_include_directories(Toolkit PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/headers")
