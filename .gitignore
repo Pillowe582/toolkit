@@ -6,3 +6,6 @@ build/
 .vscode/
 test/
 app.rc
+assets/convert.py
+assets/convert.exe
+.vscode/settings.json

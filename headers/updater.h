@@ -11,7 +11,7 @@ class Updater : public QDialog
 public:
     explicit Updater(QWidget *parent = nullptr);
     ~Updater();
-    static void checkForUpdates(const QString &currentVersion);
+    static void checkForUpdates(const QString &currentVersion = VERSION, bool alert = false);
 
 private:
     Ui::Updater *ui;

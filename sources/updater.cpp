@@ -22,7 +22,7 @@ void Updater::fetchRemote()
 {
 }
 
-void Updater::checkForUpdates(const QString &currentVersion = VERSION)
+void Updater::checkForUpdates(const QString &currentVersion, bool alert)
 {
     // 1. 在静态函数内部创建一个临时 Manager
     // 注意：由于是静态函数，manager 需要手动管理生命周期
@@ -49,7 +49,11 @@ void Updater::checkForUpdates(const QString &currentVersion = VERSION)
                     // 这里可以发出一个全局信号，或者弹出一个简单的提示框
                     QMessageBox::information(nullptr, "发现新版本 v" + latestTag, "可前往GitHub下载新版本              ");
                 }
+                else if (alert) {
+                    QMessageBox::information(nullptr, "无新版本", "当前版本： v" + currentVersion + "                   \n最新版本： v" + latestTag+"                    ");
+                }
             }
+            
         }
 
         // 5. 任务完成，自清理：先删 reply，再删 manager

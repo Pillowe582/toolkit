@@ -20,7 +20,8 @@ Changelog::Changelog(QWidget *parent) : QDialog(parent),
     QString md = in.readAll();
     file.close();
     ui->textBrowser->setMarkdown(md);
-    connect(ui->chkupdatebtn, &QPushButton::clicked, this, &Changelog::showUpdater);
+    connect(ui->chkupdatebtn, &QPushButton::clicked, this, []()
+            { Updater::checkForUpdates(VERSION, true); });
 }
 
 Changelog::~Changelog()
@@ -29,8 +30,8 @@ Changelog::~Changelog()
     delete ui;
 }
 
-void Changelog::showUpdater()
-{
-    Updater *updater = new Updater();
-    updater->exec();
-}
+// void Changelog::showUpdater()
+// {
+//     Updater *updater = new Updater();
+//     updater->exec();
+// }
