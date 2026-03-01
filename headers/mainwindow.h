@@ -55,6 +55,7 @@ private slots:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
+    void changeEvent(QEvent *event) override;
     void onCurrentRowChanged(const QModelIndex &current, const QModelIndex &previous);
 };
 

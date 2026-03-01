@@ -95,31 +95,6 @@ bool Database::setSetting(QString name, QVariant value)
     return true;
 }
 
-// QList<QVariantMap> Database::getAllItems()
-
-// {
-//     QList<QVariantMap> list;
-//     QSqlQuery query(db);
-//     query.prepare("SELECT id,name,type,tag,icon FROM items ORDER BY row ASC");
-//     if (query.exec())
-//     {
-//         while (query.next())
-//         {
-//             QVariantMap item;
-//             item["id"] = query.value("id");
-//             item["name"] = query.value("name");
-//             item["type"] = query.value("type");
-//             item["tag"] = query.value("tag");
-//             item["icon"] = query.value("icon");
-//             list.append(item);
-//         }
-
-//         return list;
-//     }
-//     qDebug() << "查询items表失败： " << query.lastError().text();
-//     return list;
-// }
-
 bool Database::setModels()
 {
     this->itemsModel = new ToolkitModel(this, db);

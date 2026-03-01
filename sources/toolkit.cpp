@@ -87,6 +87,23 @@ void MainWindow::closeEvent(QCloseEvent *event)
     }
 }
 
+void MainWindow::changeEvent(QEvent *event)
+{
+    if (event->type() == QEvent::ActivationChange)
+    {
+        QWidget *activeWindow = QApplication::activeWindow();
+
+        if (activeWindow == nullptr && !this->isAncestorOf(activeWindow))
+        {
+            qDebug() << timer.elapsed() << "失去焦点";
+            if (focusOutMinimize)
+            {
+                minimizeToTray();
+            }
+        }
+    }
+    QMainWindow::changeEvent(event);
+}
 // MARK: -Changelog
 void MainWindow::showChangelog()
 
@@ -164,6 +181,8 @@ void MainWindow::onTrayClicked(QSystemTrayIcon::ActivationReason reason)
             show();
             QTimer::singleShot(0, this, [this]()
                                { setWindowOpacity(1); }); // 防止窗口激活时的短暂白屏
+            raise();
+            activateWindow();
         }
         break;
     default:
@@ -234,7 +253,7 @@ void MainWindow::addItem(int targetRow)
 void MainWindow::removeItem(int targetRow)
 {
     QString title = db->itemsModel->data(db->itemsModel->index(targetRow, 1)).toString();
-    if (QMessageBox::warning(this, QString("删除项目%1？").arg(title), "这样将会永久失去这一项！（真的很久！）", QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
+    if (QMessageBox::warning(this, QString("删除项目 %1 ？").arg(title), "这样将会永久失去这一项！（真的很久！）", QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
         return;
     if (!db->itemsModel->removeRow(targetRow))
     {
@@ -322,13 +341,16 @@ void MainWindow::openFileDialog(int type)
             this,
             "选择文件",
             QDir::homePath(),
-            "所有文件 (*)");
+            "所有文件 (*)",
+            nullptr,
+            QFileDialog::DontUseNativeDialog);
         break;
     case 1:
         path = QFileDialog::getExistingDirectory(
             this,
             "选择文件夹",
-            QDir::homePath());
+            QDir::homePath(),
+            QFileDialog::DontUseNativeDialog);
         break;
     default:
         break;
@@ -351,6 +373,7 @@ void MainWindow::readSettings()
 {
     // 读取设置
     executeOnStart = db->getSetting("executeOnStart", false).toBool();
+    setExecuteOnStart(executeOnStart);
     focusOutMinimize = db->getSetting("focusOutMinimize", true).toBool();
     closeMinimize = db->getSetting("closeMinimize", true).toBool();
 }
