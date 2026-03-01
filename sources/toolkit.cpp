@@ -61,7 +61,11 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->noteinput, &QPlainTextEdit::textChanged, this, [this]()
             { db->model->setData(db->model->index(ui->itemlist->currentIndex().row(), 5), ui->noteinput->toPlainText()); });
     connect(ui->pastebtn, &QPushButton::clicked, this, &MainWindow::pasteClipboard);
-    qDebug() << timer.elapsed() << "信号与槽绑定完毕";
+
+    connect(ui->executebtn, &QPushButton::clicked, this, [this]()
+            { QDesktopServices::openUrl(QUrl::fromLocalFile(db->model->data(db->model->index(ui->itemlist->currentIndex().row(), 7)).toString())); });
+    qDebug()
+        << timer.elapsed() << "信号与槽绑定完毕";
 }
 
 MainWindow::~MainWindow()
