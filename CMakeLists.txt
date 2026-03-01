@@ -14,7 +14,7 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets Sql Network)
 set(AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/assets")
 set(WIN_RESOURCES app.rc)
 # 3. 添加源文件
-add_executable(Toolkit 
+add_executable(Toolkit WIN32
     #头文件
     headers/mainwindow.h
     headers/changelog.h
@@ -30,11 +30,7 @@ add_executable(Toolkit
     sources/settings.cpp
     sources/updater.cpp
 
-    #UI文件
-    assets/toolkit.ui
-    assets/changelog.ui
-    assets/settings.ui
-    assets/updater.ui
+    
 
     #资源文件
     resources.qrc

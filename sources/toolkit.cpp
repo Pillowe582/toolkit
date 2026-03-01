@@ -90,6 +90,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::closeEvent(QCloseEvent *event)
 {
+
     if (closeMinimize)
     {
         event->ignore();

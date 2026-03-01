@@ -26,6 +26,5 @@ int main(int argc, char *argv[])
     window.setWindowOpacity(1);
     qDebug() << window.timer.elapsed() << "窗口显示完毕";
     int result = app.exec();
-    system("pause");
     return result;
 }
