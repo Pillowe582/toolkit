@@ -43,6 +43,7 @@ private:
     bool focusOutMinimize;
     bool closeMinimize;
     void readSettings();
+    void setExecuteOnStart(bool);
 private slots:
     void
     showChangelog();

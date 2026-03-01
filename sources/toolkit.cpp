@@ -10,6 +10,7 @@
 #include <QFileDialog>
 #include <QClipboard>
 #include <QTimer>
+#include <QSettings>
 
 // MARK: -Basic Functions
 // 必须写成 MainWindow:: 否则编译器认为这是个全局函数，而不是类的成员
@@ -119,6 +120,21 @@ void MainWindow::showSettings()
         qDebug() << timer.elapsed() << "设置已关闭";
 }
 
+void MainWindow::setExecuteOnStart(bool autoStart)
+{
+
+    QSettings settings("HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Run", QSettings::NativeFormat);
+    if (autoStart)
+    {
+        QString path = QString("\"%1\"").arg(QDir::toNativeSeparators(QCoreApplication::applicationFilePath()));
+        settings.setValue("Pillowe's Toolkit", path);
+    }
+    else
+    {
+        settings.remove("Pillowe's Toolkit");
+    }
+    qDebug() << timer.elapsed() << "已设置开机启动状态";
+}
 // MARK: -Tray
 void MainWindow::minimizeToTray()
 {
