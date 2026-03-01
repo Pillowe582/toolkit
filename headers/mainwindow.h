@@ -1,6 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 #include <QMainWindow>
+#include <QFileIconProvider>
+#include <QElapsedTimer>
 #include "changelog.h"
 #include <QSystemTrayIcon>
 #include "database.h"
@@ -16,6 +18,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
+    QElapsedTimer timer;
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
@@ -24,6 +27,7 @@ private:
     Changelog *changelog = nullptr;
     QSystemTrayIcon *tray;
     Database *db;
+    QFileIconProvider iconProvider;
     void setupTray();
     bool hasMinimizeNoticed = false;
     void loadList();

@@ -8,16 +8,17 @@
 #include <QSqlError>
 #include <QMessageBox>
 #include <QFileDialog>
-#include <QFileIconProvider>
 #include <QClipboard>
+#include <QTimer>
 
 // MARK: -Basic Functions
 // 必须写成 MainWindow:: 否则编译器认为这是个全局函数，而不是类的成员
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow)
 {
+    timer.start();
     ui->setupUi(this);
-    qDebug() << "主界面已打开";
+    qDebug() << timer.elapsed() << "主界面已打开";
 
     // 初始化数据库
     db = new Database();
@@ -25,15 +26,17 @@ MainWindow::MainWindow(QWidget *parent)
     {
         QMessageBox::critical(this, "数据库初始化失败", "bug是凉爽的夏夜，可供人无忧地安眠。");
     }
+    qDebug() << timer.elapsed() << "数据库初始化完毕";
     // 加载列表数据
     loadList();
     selectRow(0);
+    qDebug() << timer.elapsed() << "列表数据加载完毕";
 
     // 窗口设置
     setupTray();
     setWindowTitle(QString("Pillowe's Toolkit v%1").arg(VERSION));
     setWindowIcon(QIcon(":/assets/MainIcon.ico"));
-
+    qDebug() << timer.elapsed() << "窗口设置完毕";
     // 绑定各种信号和槽
     connect(ui->changelog, &QAction::triggered, this, &MainWindow::showChangelog);
     connect(ui->filebtn, &QPushButton::clicked, this, [this]()
@@ -58,11 +61,12 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->noteinput, &QPlainTextEdit::textChanged, this, [this]()
             { db->model->setData(db->model->index(ui->itemlist->currentIndex().row(), 5), ui->noteinput->toPlainText()); });
     connect(ui->pastebtn, &QPushButton::clicked, this, &MainWindow::pasteClipboard);
+    qDebug() << timer.elapsed() << "信号与槽绑定完毕";
 }
 
 MainWindow::~MainWindow()
 {
-    qDebug() << "主界面将关闭";
+    qDebug() << timer.elapsed() << "主界面将关闭";
     saveSort();
     delete db; // 清理数据库对象
     delete ui;
@@ -78,14 +82,14 @@ void MainWindow::closeEvent(QCloseEvent *event)
 void MainWindow::showChangelog()
 
 {
-    qDebug() << "正在打开更新日志";
+    qDebug() << timer.elapsed() << "正在打开更新日志";
     if (changelog == nullptr)
     {
         changelog = new Changelog(this);
     }
     if (changelog->exec() == QDialog::Rejected)
     {
-        qDebug() << "更新日志已关闭";
+        qDebug() << timer.elapsed() << "更新日志已关闭";
     }
     changelog->raise();
     changelog->activateWindow();
@@ -94,7 +98,7 @@ void MainWindow::showChangelog()
 // MARK: -Tray
 void MainWindow::minimizeToTray()
 {
-    qDebug() << "正在最小化到托盘";
+    qDebug() << timer.elapsed() << "正在最小化到托盘";
     if (!hasMinimizeNoticed)
     {
         tray->showMessage("已最小化到托盘", "本次运行不再提醒");
@@ -109,14 +113,17 @@ void MainWindow::onTrayClicked(QSystemTrayIcon::ActivationReason reason)
     switch (reason)
     {
     case QSystemTrayIcon::Trigger:
-        qDebug() << "托盘图标被点击";
+        qDebug() << timer.elapsed() << "托盘图标被点击";
         if (isVisible())
         {
             minimizeToTray();
         }
         else
         {
+            setWindowOpacity(0);
             show();
+            QTimer::singleShot(0, this, [this]()
+                               { setWindowOpacity(1); }); // 防止窗口激活时的短暂白屏
         }
         break;
     default:
@@ -155,24 +162,25 @@ void MainWindow::setupTray()
     menu->addAction(quit);
     tray->setContextMenu(menu);
     connect(tray, &QSystemTrayIcon::activated, this, &MainWindow::onTrayClicked);
+
+    qDebug() << timer.elapsed() << "托盘设置完毕";
 }
 
 // MARK: -List
 void MainWindow::loadList()
 {
-    qDebug() << "开始加载列表";
+    qDebug() << timer.elapsed() << "开始加载列表";
     ui->itemlist->setModel(db->model);
     ui->itemlist->setModelColumn(1);
-    qDebug() << "权限检查：" << db->model->flags(db->model->index(0, 1));
-    qDebug() << "列表已加载完毕";
+    qDebug() << timer.elapsed() << "权限检查：" << db->model->flags(db->model->index(0, 1));
+    qDebug() << timer.elapsed() << "列表已加载完毕";
 }
 
 void MainWindow::addItem(int targetRow)
 {
-    qDebug() << "开始添加项目";
     if (!db->model->insertRow(targetRow))
     {
-        qDebug() << "添加项目失败：" << db->model->lastError().text();
+        qDebug() << timer.elapsed() << "添加项目失败：" << db->model->lastError().text();
         return;
     }
     db->model->setData(db->model->index(targetRow, 1), "新增项");
@@ -180,35 +188,34 @@ void MainWindow::addItem(int targetRow)
     db->model->setData(db->model->index(targetRow, 4), ":/assets/MainIcon.ico");
     saveSort();
     selectRow(targetRow);
-    qDebug() << "项目已添加于 " << targetRow << " 行";
+    qDebug() << timer.elapsed() << "项目已添加于 " << targetRow << " 行";
 }
 
 void MainWindow::removeItem(int targetRow)
 {
-    if (QMessageBox::warning(this, "删除项目？", "这样将会永久失去这一项！（真的很久！）") != QMessageBox::Yes)
+    QString title = db->model->data(db->model->index(targetRow, 1)).toString();
+    if (QMessageBox::warning(this, QString("删除项目%1？").arg(title), "这样将会永久失去这一项！（真的很久！）", QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes)
         return;
-    qDebug() << "开始删除项目";
     if (!db->model->removeRow(targetRow))
     {
-        qDebug() << "删除项目失败：" << db->model->lastError().text();
+        qDebug() << timer.elapsed() << "删除项目失败：" << db->model->lastError().text();
         return;
     }
     saveSort();
-    qDebug() << "第 " << targetRow << " 行已删除";
+    qDebug() << timer.elapsed() << "第 " << targetRow << " 行已删除";
 }
 
 void MainWindow::saveSort()
 {
     for (int i = 0; i < db->model->rowCount(); i++)
         db->model->setData(db->model->index(i, 8), i);
-    qDebug() << "正在保存至数据库";
+    qDebug() << timer.elapsed() << "正在保存至数据库";
     if (db->model->submitAll())
     {
-        qDebug() << "保存成功";
         return;
     }
     QMessageBox::critical(this, "数据库保存失败", "bug是凉爽的夏夜，可供人无忧地安眠。");
-    qDebug() << "保存失败：" << db->model->lastError().text();
+    qDebug() << timer.elapsed() << "保存失败：" << db->model->lastError().text();
     return;
 }
 
@@ -226,11 +233,15 @@ void MainWindow::swapItems(int currentRow, int direction)
 }
 void MainWindow::onCurrentRowChanged(const QModelIndex &current, const QModelIndex &previous)
 {
-    qDebug() << "当前行已切换至 " << current.row();
+
     ui->titleinput->setPlainText(db->model->data(db->model->index(current.row(), 1)).toString());
     ui->noteinput->setPlainText(db->model->data(db->model->index(current.row(), 5)).toString());
     ui->sitelbl->setHtml(QString("<a href=\"%1\">%1</a>").arg(db->model->data(db->model->index(current.row(), 6)).toString()));
-    ui->pathlbl->setPlainText(db->model->data(db->model->index(current.row(), 7)).toString());
+    QString path = db->model->data(db->model->index(current.row(), 7)).toString();
+    ui->pathlbl->setPlainText(path);
+    QIcon icon = iconProvider.icon(QFileInfo(path));
+    ui->executebtn->setIcon(icon);
+    qDebug() << timer.elapsed() << "当前行已切换至 " << current.row();
 }
 
 void MainWindow::selectRow(int row)
@@ -245,7 +256,7 @@ void MainWindow::pasteClipboard()
 {
     QClipboard *clipboard = QApplication::clipboard();
     QString text = clipboard->text().toHtmlEscaped();
-    qDebug() << "剪贴板内容：" << text;
+    qDebug() << timer.elapsed() << "剪贴板内容：" << text;
     if (text.isEmpty())
     {
         QMessageBox::information(this, "滚木", "剪贴板无有效内容               ");
@@ -288,7 +299,9 @@ void MainWindow::openFileDialog(int type)
         return;
     }
     int currentRow = ui->itemlist->currentIndex().row();
+
     db->model->setData(db->model->index(currentRow, 7), path);
+
     db->model->submitAll();
     selectRow(currentRow);
     ui->pathlbl->setPlainText(path);
