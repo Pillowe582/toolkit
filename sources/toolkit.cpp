@@ -24,6 +24,7 @@ MainWindow::MainWindow(QWidget *parent)
     }
     // 加载列表数据
     loadList();
+    selectRow(0);
 
     // 窗口设置
     setupTray();
@@ -217,6 +218,10 @@ void MainWindow::swapItems(int currentRow, int direction)
 void MainWindow::onCurrentRowChanged(const QModelIndex &current, const QModelIndex &previous)
 {
     qDebug() << "当前行已切换至 " << current.row();
+    ui->titleinput->setPlainText(db->model->data(db->model->index(current.row(), 1)).toString());
+    ui->noteinput->setPlainText(db->model->data(db->model->index(current.row(), 5)).toString());
+    ui->sitelbl->setText(db->model->data(db->model->index(current.row(), 6)).toString());
+    ui->pathlbl->setPlainText(db->model->data(db->model->index(current.row(), 7)).toString());
 }
 
 void MainWindow::selectRow(int row)
