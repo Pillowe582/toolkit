@@ -178,6 +178,8 @@ void MainWindow::addItem(int targetRow)
 
 void MainWindow::removeItem(int targetRow)
 {
+    if (QMessageBox::warning(this, "删除项目？", "这样将会永久失去这一项！（真的很久！）") != QMessageBox::Yes)
+        return;
     qDebug() << "开始删除项目";
     if (!db->model->removeRow(targetRow))
     {
