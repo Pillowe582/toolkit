@@ -4,6 +4,7 @@
 #include <QFileIconProvider>
 #include <QElapsedTimer>
 #include "changelog.h"
+#include "settings.h"
 #include <QSystemTrayIcon>
 #include "database.h"
 QT_BEGIN_NAMESPACE
@@ -25,6 +26,7 @@ public:
 private:
     Ui::MainWindow *ui;
     Changelog *changelog = nullptr;
+    Settings *settings = nullptr;
     QSystemTrayIcon *tray;
     Database *db;
     QFileIconProvider iconProvider;
@@ -38,6 +40,7 @@ private:
     void selectRow(int);
 private slots:
     void showChangelog();
+    void showSettings();
     void minimizeToTray();
     void onTrayClicked(QSystemTrayIcon::ActivationReason reason);
     void pasteClipboard();

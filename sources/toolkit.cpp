@@ -39,6 +39,7 @@ MainWindow::MainWindow(QWidget *parent)
     qDebug() << timer.elapsed() << "窗口设置完毕";
     // 绑定各种信号和槽
     connect(ui->changelog, &QAction::triggered, this, &MainWindow::showChangelog);
+    connect(ui->settings, &QAction::triggered, this, &MainWindow::showSettings);
     connect(ui->filebtn, &QPushButton::clicked, this, [this]()
             { openFileDialog(0); });
     connect(ui->folderbtn, &QPushButton::clicked, this, [this]()
@@ -97,6 +98,22 @@ void MainWindow::showChangelog()
     }
     changelog->raise();
     changelog->activateWindow();
+}
+
+// MARK: Settings
+void MainWindow::showSettings()
+{
+    qDebug() << timer.elapsed() << "正在打开设置";
+    if (settings == nullptr)
+    {
+        settings = new Settings(this);
+    }
+    if (settings->exec() == QDialog::Rejected)
+    {
+        qDebug() << timer.elapsed() << "设置已关闭";
+    }
+    settings->raise();
+    settings->activateWindow();
 }
 
 // MARK: -Tray

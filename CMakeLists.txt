@@ -18,16 +18,19 @@ add_executable(Toolkit
     headers/mainwindow.h
     headers/changelog.h
     headers/database.h
+    headers/settings.h
 
     #源文件
     sources/main.cpp
     sources/toolkit.cpp
     sources/changelog.cpp
     sources/database.cpp
+    sources/settings.cpp
 
     #UI文件
     assets/toolkit.ui
     assets/changelog.ui
+    assets/settings.ui
 
     #资源文件
     resources.qrc
