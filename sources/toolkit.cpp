@@ -93,7 +93,7 @@ void MainWindow::changeEvent(QEvent *event)
     {
         QWidget *activeWindow = QApplication::activeWindow();
 
-        if (activeWindow == nullptr && !this->isAncestorOf(activeWindow))
+        if (activeWindow == nullptr)
         {
             qDebug() << timer.elapsed() << "失去焦点";
             if (focusOutMinimize)
@@ -228,10 +228,15 @@ void MainWindow::setupTray()
 // MARK: -List
 void MainWindow::loadList()
 {
+
     qDebug() << timer.elapsed() << "开始加载列表";
-    ui->itemlist->setModel(db->itemsModel);
+    static IconProxyModel *proxy = new IconProxyModel(this);
+    proxy->setSourceModel(db->itemsModel);
+    ui->itemlist->setModel(proxy);
     ui->itemlist->setModelColumn(1);
-    qDebug() << timer.elapsed() << "权限检查：" << db->itemsModel->flags(db->itemsModel->index(0, 1));
+    ui->itemlist->setIconSize(QSize(24, 24));
+    ui->itemlist->setSpacing(2);
+    // qDebug() << timer.elapsed() << "权限检查：" << db->itemsModel->flags(db->itemsModel->index(0, 1));
     qDebug() << timer.elapsed() << "列表已加载完毕";
 }
 
@@ -363,7 +368,6 @@ void MainWindow::openFileDialog(int type)
     int currentRow = ui->itemlist->currentIndex().row();
 
     db->itemsModel->setData(db->itemsModel->index(currentRow, 7), path);
-
     db->itemsModel->submitAll();
     selectRow(currentRow);
     ui->pathlbl->setPlainText(path);

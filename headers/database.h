@@ -4,7 +4,7 @@
 #include <QSqlDatabase>
 #include <QSqlQuery>
 #include <QSqlTableModel>
-
+#include <QFileIconProvider>
 class ToolkitModel : public QSqlTableModel
 {
     Q_OBJECT
@@ -52,5 +52,37 @@ public:
 private:
     QSqlDatabase db;
     bool setModels();
+};
+
+#include <QIdentityProxyModel>
+#include <QIcon>
+class IconProxyModel : public QIdentityProxyModel
+{
+private:
+    QFileIconProvider iconProvider;
+
+public:
+    using QIdentityProxyModel::QIdentityProxyModel;
+
+    QVariant data(const QModelIndex &proxyIndex, int role) const override
+    {
+        // 我们只在第 1 列（标题列）绘制图标
+        if (role == Qt::DecorationRole && proxyIndex.column() == 1)
+        {
+
+            // 尝试从第 7 列获取文件路径并提取系统图标
+            QString filePath = sourceModel()->index(proxyIndex.row(), 7).data().toString();
+            if (!filePath.isEmpty())
+            {
+                return iconProvider.icon(QFileInfo(filePath));
+            }
+
+            // 3. 兜底方案：返回程序默认图标
+            return QIcon(":/assets/MainIcon.ico");
+        }
+
+        // 其他角色（如文字内容）正常返回
+        return QIdentityProxyModel::data(proxyIndex, role);
+    }
 };
 #endif
