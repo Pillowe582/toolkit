@@ -34,9 +34,9 @@ private:
     void selectRow(int);
 private slots:
     void showChangelog();
-    void showSurprise();
     void minimizeToTray();
     void onTrayClicked(QSystemTrayIcon::ActivationReason reason);
+    void pasteClipboard();
 
 protected:
     void closeEvent(QCloseEvent *event) override;

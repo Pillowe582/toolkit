@@ -7,6 +7,7 @@
 #include <QIcon>
 #include <QSqlError>
 #include <QMessageBox>
+#include <QClipboard>
 
 // MARK: -Basic Functions
 // 必须写成 MainWindow:: 否则编译器认为这是个全局函数，而不是类的成员
@@ -33,7 +34,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 绑定各种信号和槽
     connect(ui->changelog, &QAction::triggered, this, &MainWindow::showChangelog);
-    connect(ui->ngguu, &QAction::triggered, this, &MainWindow::showSurprise);
+    connect(ui->ngguu, &QAction::triggered, this, []()
+            { QDesktopServices::openUrl(QUrl("https://vdse.bdstatic.com//192d9a98d782d9c74c96f09db9378d93.mp4")); });
     connect(ui->appendbtn, &QPushButton::clicked, this, [this]()
             { addItem(ui->itemlist->currentIndex().row() + 1); });
     connect(ui->removebtn, &QPushButton::clicked, this, [this]()
@@ -44,6 +46,12 @@ MainWindow::MainWindow(QWidget *parent)
             { swapItems(ui->itemlist->currentIndex().row(), -1); });
     connect(ui->downbtn, &QPushButton::clicked, this, [this]()
             { swapItems(ui->itemlist->currentIndex().row(), 1); });
+
+    connect(ui->titleinput, &QPlainTextEdit::textChanged, this, [this]()
+            { db->model->setData(db->model->index(ui->itemlist->currentIndex().row(), 1), ui->titleinput->toPlainText()); });
+    connect(ui->noteinput, &QPlainTextEdit::textChanged, this, [this]()
+            { db->model->setData(db->model->index(ui->itemlist->currentIndex().row(), 5), ui->noteinput->toPlainText()); });
+    connect(ui->pastebtn, &QPushButton::clicked, this, &MainWindow::pasteClipboard);
 }
 
 MainWindow::~MainWindow()
@@ -123,7 +131,8 @@ void MainWindow::setupTray()
     QAction *quit = new QAction("退出", this);
     connect(quit, &QAction::triggered, this, &QApplication::quit);
     QAction *surprise = new QAction("不要点击", this);
-    connect(surprise, &QAction::triggered, this, &MainWindow::showSurprise);
+    connect(surprise, &QAction::triggered, this, []()
+            { QDesktopServices::openUrl(QUrl("https://vdse.bdstatic.com//192d9a98d782d9c74c96f09db9378d93.mp4")); });
     QAction *minimize = new QAction("最小化", this);
     connect(minimize, &QAction::triggered, this, &MainWindow::minimizeToTray);
     QAction *settings = new QAction("设置...", this);
@@ -140,14 +149,6 @@ void MainWindow::setupTray()
     menu->addAction(quit);
     tray->setContextMenu(menu);
     connect(tray, &QSystemTrayIcon::activated, this, &MainWindow::onTrayClicked);
-}
-
-// MARK: -Surprise
-void MainWindow::showSurprise()
-
-{
-    qDebug() << "正在打开彩蛋";
-    QDesktopServices::openUrl(QUrl("https://vdse.bdstatic.com//192d9a98d782d9c74c96f09db9378d93.mp4"));
 }
 
 // MARK: -List
@@ -222,7 +223,7 @@ void MainWindow::onCurrentRowChanged(const QModelIndex &current, const QModelInd
     qDebug() << "当前行已切换至 " << current.row();
     ui->titleinput->setPlainText(db->model->data(db->model->index(current.row(), 1)).toString());
     ui->noteinput->setPlainText(db->model->data(db->model->index(current.row(), 5)).toString());
-    ui->sitelbl->setText(db->model->data(db->model->index(current.row(), 6)).toString());
+    ui->sitelbl->setHtml(QString("<a href=\"%1\">%1</a>").arg(db->model->data(db->model->index(current.row(), 6)).toString()));
     ui->pathlbl->setPlainText(db->model->data(db->model->index(current.row(), 7)).toString());
 }
 
@@ -231,4 +232,25 @@ void MainWindow::selectRow(int row)
     QModelIndex nextSelection = db->model->index(row, 1);
     ui->itemlist->setCurrentIndex(nextSelection);
     ui->itemlist->selectionModel()->select(nextSelection, QItemSelectionModel::ClearAndSelect);
+}
+
+// MARK: -Input User Data
+void MainWindow::pasteClipboard()
+{
+    QClipboard *clipboard = QApplication::clipboard();
+    QString text = clipboard->text().toHtmlEscaped();
+    qDebug() << "剪贴板内容：" << text;
+    if (text.isEmpty())
+    {
+        QMessageBox::information(this, "滚木", "剪贴板无有效内容               ");
+        return;
+    }
+    if (QMessageBox::question(this, "粘贴？！", "要粘贴并覆盖吗                 ", QMessageBox::Yes | QMessageBox::No) == QMessageBox::Yes)
+    {
+
+        db->model->setData(db->model->index(ui->itemlist->currentIndex().row(), 6), text);
+        db->model->submitAll();
+        ui->sitelbl->setHtml(QString("<a href=\"%1\">%1</a>").arg(text));
+        return;
+    }
 }
