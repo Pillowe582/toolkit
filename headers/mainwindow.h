@@ -37,6 +37,7 @@ private slots:
     void minimizeToTray();
     void onTrayClicked(QSystemTrayIcon::ActivationReason reason);
     void pasteClipboard();
+    void openFileDialog(int type);
 
 protected:
     void closeEvent(QCloseEvent *event) override;

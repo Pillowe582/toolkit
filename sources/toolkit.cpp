@@ -7,6 +7,8 @@
 #include <QIcon>
 #include <QSqlError>
 #include <QMessageBox>
+#include <QFileDialog>
+#include <QFileIconProvider>
 #include <QClipboard>
 
 // MARK: -Basic Functions
@@ -34,6 +36,10 @@ MainWindow::MainWindow(QWidget *parent)
 
     // 绑定各种信号和槽
     connect(ui->changelog, &QAction::triggered, this, &MainWindow::showChangelog);
+    connect(ui->filebtn, &QPushButton::clicked, this, [this]()
+            { openFileDialog(0); });
+    connect(ui->folderbtn, &QPushButton::clicked, this, [this]()
+            { openFileDialog(1); });
     connect(ui->ngguu, &QAction::triggered, this, []()
             { QDesktopServices::openUrl(QUrl("https://vdse.bdstatic.com//192d9a98d782d9c74c96f09db9378d93.mp4")); });
     connect(ui->appendbtn, &QPushButton::clicked, this, [this]()
@@ -253,4 +259,37 @@ void MainWindow::pasteClipboard()
         ui->sitelbl->setHtml(QString("<a href=\"%1\">%1</a>").arg(text));
         return;
     }
+}
+
+void MainWindow::openFileDialog(int type)
+{
+    QString path;
+    switch (type)
+    {
+    case 0:
+        path = QFileDialog::getOpenFileName(
+            this,
+            "选择文件",
+            QDir::homePath(),
+            "所有文件 (*)");
+        break;
+    case 1:
+        path = QFileDialog::getExistingDirectory(
+            this,
+            "选择文件夹",
+            QDir::homePath());
+        break;
+    default:
+        break;
+    }
+
+    if (path.isEmpty())
+    {
+        return;
+    }
+    int currentRow = ui->itemlist->currentIndex().row();
+    db->model->setData(db->model->index(currentRow, 7), path);
+    db->model->submitAll();
+    selectRow(currentRow);
+    ui->pathlbl->setPlainText(path);
 }
