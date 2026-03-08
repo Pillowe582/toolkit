@@ -8,3 +8,4 @@ test/
 app.rc
 assets/convert.py
 assets/convert.exe
+*.py

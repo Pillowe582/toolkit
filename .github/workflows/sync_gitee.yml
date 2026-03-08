@@ -1,0 +1,66 @@
+name: Sync to Gitee
+
+on:
+  push:
+    branches:
+      - '**'
+  release:
+    types: [published]
+
+jobs:
+  sync-code:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mirror to Gitee
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+
+          git remote add gitee https://${{ secrets.GITEE_USERNAME }}:${{ secrets.GITEE_TOKEN }}@gitee.com/${{ secrets.GITEE_USERNAME }}/${{ secrets.GITEE_REPO }}.git
+
+          git push --mirror gitee
+
+  sync-release:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download assets
+        run: |
+          mkdir -p assets
+          gh release download ${{ github.event.release.tag_name }} -D assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Gitee Release
+        id: create_release
+        run: |
+          RESPONSE=$(curl -s -X POST https://gitee.com/api/v5/repos/${{ secrets.GITEE_USERNAME }}/${{ secrets.GITEE_REPO }}/releases \
+          -d access_token=${{ secrets.GITEE_TOKEN }} \
+          -d tag_name=${{ github.event.release.tag_name }} \
+          -d name="${{ github.event.release.name }}" \
+          -d body="${{ github.event.release.body }}")
+
+          echo "$RESPONSE"
+
+          RELEASE_ID=$(echo "$RESPONSE" | jq -r '.id')
+          echo "release_id=$RELEASE_ID" >> $GITHUB_OUTPUT
+
+      - name: Upload assets to Gitee
+        run: |
+          if [ -d assets ]; then
+            for file in assets/*; do
+              curl -F "access_token=${{ secrets.GITEE_TOKEN }}" \
+                   -F "file=@$file" \
+                   https://gitee.com/api/v5/repos/${{ secrets.GITEE_USERNAME }}/${{ secrets.GITEE_REPO }}/releases/${{ steps.create_release.outputs.release_id }}/attach_files
+            done
+          fi
